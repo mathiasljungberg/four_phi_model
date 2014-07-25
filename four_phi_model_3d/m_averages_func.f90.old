@@ -1,0 +1,522 @@
+module m_averages_func
+  use parameters
+  use m_system_3d
+  use m_mc_parameters
+  use m_md_parameters
+  use hist_class
+  use m_averages
+  implicit none
+  
+contains
+
+  
+  subroutine initialize_averages_mc(system, av)
+    type(system_3d), intent(in):: system
+    type(averages), intent(inout)::av
+
+    integer:: i1,i2,i3,j, start1, start2, start3, stop1, stop2, stop3
+    integer:: supercell(3)
+
+    supercell = system % supercell
+
+    av % nav1 = 0.0_wp
+    av % nav2 = 0.0_wp
+
+    allocate(av % displacements_tot(system % ndisp))
+    allocate(av % displacements_tot2(system % ndisp))
+    allocate(av % q_average(3, av % nqpoints_qav), av % q2_average(3,3,av % nqpoints_qav)) 
+
+    av % energy_tot = 0.0_wp
+    !der1_tot = 0.0_wp
+    !der2_tot = 0.0_wp
+    !der3_tot = 0.0_wp
+    !der4_tot = 0.0_wp
+    !der11_tot = 0.0_wp
+    !der13_tot = 0.0_wp
+    !der22_tot = 0.0_wp
+    av % displacements_tot = 0.0_wp
+    av % displacements_tot2 = 0.0_wp
+    av % polarization = 0.0_wp
+    av % polarization2 = 0.0_wp
+    av % q_average = 0.0_wp
+    av % q2_average = 0.0_wp
+
+    ! initialize histograms
+    call hist_init(av % hist_x1, 1000, -2.5_wp, 2.5_wp)
+    call hist_init(av % hist_x2, 1000, -2.5_wp, 2.5_wp)
+    call hist_init(av % hist_x3, 1000, -2.5_wp, 2.5_wp)
+
+    call hist_init(av % hist_P1, 1000, -2.5_wp, 2.5_wp)
+    call hist_init(av % hist_P2, 1000, -2.5_wp, 2.5_wp)
+    call hist_init(av % hist_P3, 1000, -2.5_wp, 2.5_wp)
+
+    ! <q_1 q_j> averages
+    !allocate(qpoints_qav(3,av % nqpoints_qav))
+
+    if(av % av_dyn) then
+       ! compressed storage of fc matrix
+       allocate(av % dyn_mat(system % ndisp, 21), &
+            av % dyn_mat_tmp(system % ndisp, 21) )
+       av % dyn_mat = 0.0_wp
+       av % dyn_mat_tmp = 0.0_wp
+
+       ! dxdx matrix
+       allocate(av % dxdx(system % ndisp, 21), &
+            av % dxdx_tmp(system % ndisp, 21) )
+       av % dxdx = 0.0_wp
+       av % dxdx_tmp = 0.0_wp
+       
+       if (av % mom4_gamma) then
+
+          av % mom4_g = 0.0_wp
+          av % mom4_g_tmp = 0.0_wp
+          
+       end if ! if (av % mom4_gamma) then
+
+       
+       if(av % mom4_gamma_q) then
+          
+          av % supercell_red = supercell / av % div_qpoints_4_mom          
+          av % nqpoints_4_mom = product(av % supercell_red) 
+          
+          allocate(av % dyn_mat2(av % nqpoints_4_mom,3,3,3), av % dyn_mat2_tmp(av % nqpoints_4_mom,3,3,3))
+          allocate(av % qpoints_4_mom(av % nqpoints_4_mom, 3)) 
+          
+          av % dyn_mat2 =0.0_wp
+          av % dyn_mat2_tmp =0.0_wp
+          
+          ! calculate the necessary q-points
+          j=1
+          
+          if(mod(av % supercell_red(1),2) .eq. 0) then
+             start1 = - av % supercell_red(1) / 2 +1
+             stop1 = av % supercell_red(1) /2
+          else
+             start1 =  - floor(av % supercell_red(1) / 2.0_wp)
+             stop1 =   floor(av % supercell_red(1) / 2.0_wp)
+          end if
+
+          if(mod(av % supercell_red(2),2) .eq. 0) then
+             start2 = - av % supercell_red(2) / 2 +1
+             stop2 = av % supercell_red(2) /2
+          else
+             start2 =  - floor(av % supercell_red(2) / 2.0_wp)
+             stop2 =   floor(av % supercell_red(2) / 2.0_wp)
+          end if
+
+          if(mod(av % supercell_red(3),2) .eq. 0) then
+             start3 = - av % supercell_red(3) / 2 +1
+             stop3 = av % supercell_red(3) /2
+          else
+             start3 =  - floor(av % supercell_red(3) / 2.0_wp)
+             stop3 =   floor(av % supercell_red(3) / 2.0_wp)
+          end if
+
+
+          do i1= start1, stop1
+             do i2= start2, stop2
+                do i3= start3, stop3
+                   
+                   av % qpoints_4_mom(j,:) = dfloat((/i1,i2,i3/)) / av % supercell_red
+                   
+                   write(6,*) av % qpoints_4_mom(j,:)
+                   
+                   j=j+1
+                end do
+             end do
+          end do
+          
+       end if ! if(av % mom4_gamma_q)
+       
+    end if ! if(av % av_dyn) then
+
+  end subroutine initialize_averages_mc
+
+  subroutine collect_averages_mc(system, av, mc_outp)
+    type(system_3d), intent(in)::system
+    type(averages), intent(inout)::av
+    type(mc_output), intent(in)::mc_outp
+    
+    integer:: i,i1,i2,i3,j, q
+    complex(kind=wp):: array_q(3)
+    
+    
+    if( mod(mc_outp % nsweeps, av % av_step1 ) .eq. 0 ) then
+
+       av % nav1 = av % nav1 + 1.0_wp
+       
+       ! get averages
+       !Energy = Energy 
+       !Energy =  system_1d_get_potential_energy(system)
+       !der1 =  system_1d_get_derivative_1d(system, 1)
+       !der2 =  system_1d_get_derivative_1d(system, 2)
+       !der3 =  system_1d_get_derivative_1d(system, 3)
+       !der4 =  system_1d_get_derivative_1d(system, 4)
+       
+       av % energy_tot = av % energy_tot + mc_outp % energy
+       !der1_tot =  der1_tot + der1
+       !der2_tot =  der2_tot + der2
+       !der3_tot =  der3_tot + der3
+       !der4_tot =  der4_tot + der4
+       !der11_tot =  der11_tot + der1 ** 2
+       !der13_tot =  der13_tot + der1 * der3
+       !der22_tot =  der22_tot + der2 ** 2
+        
+       av % displacements_tot = av % displacements_tot + system % displacements
+       av % displacements_tot2 = av % displacements_tot2 + system % displacements ** 2
+
+       ! fill histograms    
+       do j=1, system % nparticles
+          call hist_add(av % hist_x1, system % displacements(3* (j-1) + 1), 1.0_wp )
+          call hist_add(av % hist_x2, system % displacements(3* (j-1) + 2), 1.0_wp )
+          call hist_add(av % hist_x3, system % displacements(3* (j-1) + 3), 1.0_wp )
+       end do
+       
+       call get_q_space(system % supercell, system % displacements, array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )      
+       av % polarization = av % polarization + dreal(array_q)
+       av % polarization2 = av % polarization2 + dreal(array_q)**2
+       
+       ! right now, do the <q_i q_j> averages !for Gamma only
+       do q=1, av % nqpoints_qav
+          call get_q_space(system % supercell, system % displacements, array_q, av % qpoints_qav(:,q) )      
+          av % q_average(:,q) = av % q_average(:,q) + dreal(array_q) 
+          do i=1,3
+             do j=1,3
+                av % q2_average(i,j,q) = av % q2_average(i,j,q) + dreal(array_q(i)) * dreal(array_q(j))
+             end do
+          end do
+       end do
+       
+       call hist_add(av % hist_P1, dreal(array_q(1)), 1.0_wp)
+       call hist_add(av % hist_P2, dreal(array_q(2)), 1.0_wp)
+       call hist_add(av % hist_P3, dreal(array_q(3)), 1.0_wp)
+        
+     end if
+
+     ! write order parameter Q(x_i) = 1/ N *sum x_i
+     if( mod(mc_outp % nsweeps, av % av_step2 ) .eq. 0 ) then
+        
+        av % nav2 = av % nav2 + 1.0_wp        
+        
+        call get_q_space(system % supercell, system % displacements, array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )
+        write(8,*) mc_outp % nsweeps, dreal(array_q)
+        
+        if(av % av_dyn) then
+           !!call system_3d_get_dyn_mat(system, av % dyn_mat_tmp)
+           !call system_3d_get_fc(system, av % dyn_mat_tmp)
+           !av % dyn_mat = av % dyn_mat + av % dyn_mat_tmp
+
+           ! compressed force constant matrix
+           call system_3d_get_fc_compressed(system, av % dyn_mat_tmp)
+           av % dyn_mat = av % dyn_mat + av % dyn_mat_tmp
+
+           ! compressed dxdx matrix
+           call system_3d_get_dxdx_compressed(system, av % dxdx_tmp)
+           av % dxdx = av % dxdx + av % dxdx_tmp
+
+
+           if(av % mom4_gamma) then
+             !write(6,*) "computing 4:th moments"
+             call compute_4mom2
+              !write(6,*) " finished computing 4:th moments"
+           end if ! av % mom4_gamma
+           
+           if(av % mom4_gamma_q) then
+              call compute_4mom
+           end if
+
+        end if ! av % dyn
+        
+     end if !if( mod(mc_outp % nsweeps, av % av_step2 ) .eq. 0 ) then
+   
+   contains
+     
+     subroutine compute_4mom
+       real(kind=wp):: qp1(3), qp2(3)
+       complex(kind=wp):: fc_q1(3,3), fc_q2(3,3)
+       
+       ! loop over the q-points we want to use
+       do i=1, av % nqpoints_4_mom
+         qp1 = av % qpoints_4_mom(i,:)
+       
+         call system_3d_get_fc_q(system, av % dyn_mat_tmp, (/0.0_wp, 0.0_wp, 0.0_wp/), qp1, fc_q1)
+         call system_3d_get_fc_q(system, av % dyn_mat_tmp, (/0.0_wp, 0.0_wp, 0.0_wp/), -qp1, fc_q2)
+               
+         do i1 =1,3
+           do i2 =1,3
+             do i3 =1,3
+               av % dyn_mat2_tmp(i, i1,i2,i3) = dreal(fc_q1(i1,i2) * fc_q2(i3,i2)) 
+               av % dyn_mat2(i, i1,i2,i3) = av % dyn_mat2(i, i1,i2,i3) + av % dyn_mat2_tmp(i, i1,i2,i3)
+             end do
+           end do
+         end do
+         
+       end do ! i
+       
+     end subroutine compute_4mom
+     
+     subroutine compute_4mom2
+       
+       call system_3d_get_4mom(system, av % dyn_mat_tmp, (/0.0_wp, 0.0_wp, 0.0_wp/), av % mom4_g_tmp)
+       
+       av % mom4_g = av % mom4_g + av % mom4_g_tmp
+       !write(6,*) "av % mom4_g_tmp",av % mom4_g_tmp
+!, av % mom4_g_tmp
+
+     end subroutine compute_4mom2
+
+
+   end subroutine collect_averages_mc
+
+
+  subroutine finalize_averages_mc(av)
+     type(averages), intent(inout)::av
+    ! type(mc_output), intent(in)::mc_outp
+
+     av % energy_tot =  av % energy_tot / (av % nav1)
+     !der1_tot =  der1_tot / (mc_outp % nmoves)
+     !der2_tot =  der2_tot / (mc_outp % nmoves)
+     !der3_tot =  der3_tot / (mc_outp % nmoves)
+     !der4_tot =  der4_tot / (mc_outp % nmoves)
+     !der11_tot =  der11_tot / (mc_outp % nmoves)
+     !der13_tot =  der13_tot / (mc_outp % nmoves)
+     !der22_tot =  der22_tot / (mc_outp % nmoves)
+
+     av % displacements_tot = av % displacements_tot / (av % nav1)
+     av % displacements_tot2 = av % displacements_tot2 / (av % nav1)
+     av % polarization = av % polarization / (av % nav1)
+     av % polarization2 = av % polarization2 / (av % nav1)
+     av % q_average = av % q_average / (av % nav1)
+     av % q2_average = av % q2_average / (av % nav1)
+
+     write(6,*) "so far"
+     
+     if(av % av_dyn) then
+        av % dyn_mat = av % dyn_mat / (av % nav2)
+        av % dxdx = av % dxdx / (av % nav2)
+
+        if (av % mom4_gamma) then
+           av % mom4_g = av % mom4_g / (av % nav2)
+        end if
+
+        if (av % mom4_gamma_q) then
+           av % dyn_mat2 = av % dyn_mat2 / (av % nav2)
+        end if
+     end if
+     
+   end subroutine finalize_averages_mc
+  
+   subroutine print_averages_mc(system, av, mc_outp, mc_params)
+     type(system_3d), intent(in)::system
+     type(averages), intent(inout)::av
+     type(mc_output), intent(in)::mc_outp
+     type(hist):: hist_dyn_mat
+     type(mc_parameters), intent(in)::mc_params
+
+     complex(kind=wp):: array_q(3), array_q2(3)    
+     integer:: i,j,q
+     integer:: ndisp
+     real(kind=wp), allocatable:: eig(:), freq(:), eigvec(:,:)
+     
+     write(6,*) "Number of attempted moves", mc_outp % nmoves
+     write(6,*) "Number of accepted moves", mc_outp % acc, "in per cent", (100.0_wp * mc_outp % acc) / mc_outp % nmoves, "%"
+     write(6,*) "Average potential energy", av % energy_tot
+     ! write(6,*) "Average first derivative", der1_tot
+     ! write(6,*) "Average second derivative", der2_tot
+     ! write(6,*) "Average third derivative", der3_tot
+     ! write(6,*) "Average fourth derivative", der4_tot,  "times beta-1", der4_tot / mc_params % beta
+     ! write(6,*) "Average squared first derivative", der11_tot, "times beta", der11_tot * mc_params % beta
+     ! write(6,*) "Average squared second derivative", der22_tot
+     ! write(6,*) "<V' * V'''>", der13_tot
+     
+     !do i=1, size(av % displacements_tot)
+     !   write(7,*) i, av % displacements_tot(i) !system % displacements(i)
+     !end do
+     
+     call get_q_space(system % supercell, av % displacements_tot , array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )
+     
+     write(6,*) "Order parameter", dreal(array_q)
+
+
+     ! ji: modified to include beta=1/kT factor  AND to compute susceptibility correctly :-)
+
+     write(6,*) "Susceptibility. <P^2> - <P>^2 ", (av % polarization2 - av % polarization ** 2 ) * mc_params % beta * system % nparticles 
+
+     ! write <q_i q_j> and <q_i>
+     open(41, file="mode_susceptibilities.dat", status="unknown") 
+     write(41,*) av % nqpoints_qav
+     write(41,*) mc_params % beta * system % nparticles
+     write(41,*)
+     do q=1, av % nqpoints_qav
+        write(41,*) av % qpoints_qav(:,q)
+        !write(41,*)  (( mc_params % beta * system % nparticles * &
+        !     (av % q2_average(i,j,q) - av % q_average(i,q) * av % q_average(j,q)), i=1,3),j=1,3)
+        write(41,*)  (av % q_average(i,q),  i=1,3)
+        write(41,*)  ((av % q2_average(i,j,q), i=1,3),j=1,3)
+        write(41,*)
+     end do
+     close(41)    
+
+     ! write histograms
+     call hist_write(av % hist_x1, "histogram_x1.dat")
+     call hist_write(av % hist_x2, "histogram_x2.dat")
+     call hist_write(av % hist_x3, "histogram_x3.dat")
+
+     call hist_write(av % hist_P1, "histogram_P1.dat")
+     call hist_write(av % hist_P2, "histogram_P2.dat")
+     call hist_write(av % hist_P3, "histogram_P3.dat")
+
+     
+     ! diagonalize and write the average dynamical matrix (fc matrix now)
+     if(av % av_dyn ) then
+        write(6,*) "writing dynamical matrix"
+        write(40,*) system % supercell
+        write(40,*) av % dyn_mat
+        write(6,*) "Done"
+
+        write(6,*) "writing dxdx matrix"
+        write(50,*) system % supercell
+        write(50,*) av % dxdx * mc_params % beta
+        write(6,*) "Done"
+        
+        if (.false.) then
+
+           ! diagonalize
+           ndisp = size(av % dyn_mat,1)        
+           allocate(eig(ndisp),eigvec(ndisp,ndisp), freq(ndisp))
+           call diagonalize(av % dyn_mat, eig, eigvec)
+           
+           write(6,*) "diagonalized average dynamical matrix"
+           
+           open(41, file="average_dyn_mat.dat", status="unknown")
+           
+           freq = sqrt(eig) !* hbar * cm
+           do i=1, ndisp
+              write(41,*) freq(i)
+           end do
+           
+           close(41)
+           
+           ! put frequencies in histogram
+           call hist_init(hist_dyn_mat, 1000, 0.0_wp, 10.0_wp)
+           do i=1, ndisp
+              call hist_add(hist_dyn_mat, freq(i), 1.0_wp)
+           end do
+           call hist_write(hist_dyn_mat, "histogram_dyn_mat.dat")
+           
+           deallocate(eig, eigvec)
+        end if ! if (.false.) then
+
+        if (av % mom4_gamma) then
+           write(44,*) av % mom4_g
+        end if
+
+
+        if (av % mom4_gamma_q) then
+           write(42,*) av % nqpoints_4_mom
+           do i=1, av % nqpoints_4_mom
+              write(42,*)  av % qpoints_4_mom(i,:), av % dyn_mat2(i,:,:,:) 
+           end do
+           
+           write(43,*) sum(sum(av % dyn_mat2(:,:,:,:),3),1)
+        end if
+
+
+     end if ! if(av % av_dyn ) then
+        
+   end subroutine print_averages_mc
+  
+  subroutine initialize_averages_md(system, av)
+    type(system_3d), intent(in):: system
+    type(averages), intent(inout)::av
+
+    call initialize_averages_mc(system, av)
+
+  end subroutine initialize_averages_md
+  
+  subroutine collect_averages_md(system, av, md_outp)
+    type(system_3d), intent(in)::system
+    type(averages), intent(inout)::av
+    type(md_output), intent(in)::md_outp
+    
+    integer:: j
+    complex(kind=wp):: array_q(3)
+
+    if( mod(md_outp % nsteps, av % av_step1 ) .eq. 0 ) then    
+
+#      call 
+      av % nav1 = av % nav1 + 1.0_wp
+      av % energy_tot = av % energy_tot + system_3d_get_potential_energy(system)  
+      av % displacements_tot = av % displacements_tot + system % displacements
+      
+      
+      
+ 
+       ! fill histograms    
+       do j=1, system % nparticles
+          call hist_add(av % hist_x1, system % displacements(3* (j-1) + 1), 1.0_wp )
+          call hist_add(av % hist_x2, system % displacements(3* (j-1) + 2), 1.0_wp )
+          call hist_add(av % hist_x3, system % displacements(3* (j-1) + 3), 1.0_wp )
+       end do
+       
+       ! write order parameter Q(x_i) = 1/ N *sum x_i
+       if( mod(md_outp % nsteps, av % av_step1) .eq. 0 ) then
+          
+          call get_q_space(system % supercell, system % displacements, array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )
+          write(8,*) md_outp % nsteps, dreal(array_q)
+          
+       end if
+     
+    end if
+
+  end subroutine collect_averages_md
+
+  subroutine finalize_averages_md(av)
+    type(averages), intent(inout)::av
+ 
+    call finalize_averages_mc(av)
+
+  end subroutine finalize_averages_md
+
+
+   subroutine print_averages_md(system, av, md_outp)
+     type(system_3d), intent(in)::system
+     type(averages), intent(inout)::av
+     type(md_output), intent(in)::md_outp
+     
+     complex(kind=wp):: array_q(3)    
+     integer:: i
+
+     
+     write(6,*) "Number of steps", md_outp % nsteps
+     write(6,*) "Average potential energy", av % energy_tot
+     !write(6,*) "Number of attempted moves", mc_outp % nmoves
+     !write(6,*) "Number of accepted moves", mc_outp % acc, "in per cent", (100.0_wp * mc_outp % acc) / mc_outp % nmoves, "%"
+     !write(6,*) "Average potential energy", av % energy_tot
+     
+     ! write(6,*) "Average first derivative", der1_tot
+     ! write(6,*) "Average second derivative", der2_tot
+     ! write(6,*) "Average third derivative", der3_tot
+     ! write(6,*) "Average fourth derivative", der4_tot,  "times beta-1", der4_tot / mc_params % beta
+     ! write(6,*) "Average squared first derivative", der11_tot, "times beta", der11_tot * mc_params % beta
+     ! write(6,*) "Average squared second derivative", der22_tot
+     ! write(6,*) "<V' * V'''>", der13_tot
+     
+     do i=1, size(av % displacements_tot)
+        write(7,*) i, av % displacements_tot(i) !system % displacements(i)
+     end do
+     
+     call get_q_space(system % supercell, av % displacements_tot , array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )
+     
+     write(6,*) "Order parameter", dreal(array_q)
+
+     ! write histograms
+     call hist_write(av % hist_x1, "histogram_x1.dat")
+     call hist_write(av % hist_x2, "histogram_x2.dat")
+     call hist_write(av % hist_x3, "histogram_x3.dat")
+     
+   end subroutine print_averages_md
+
+
+
+end module m_averages_func

@@ -1,0 +1,33 @@
+ input parameters
+ ****************
+ mc                                                                              
+ None                                                                                       0
+ F mc_eq_1.0.restart                                                               
+ mc_1.0                                                                          
+           4           4           4
+   1.0000000000000000        1.0000000000000000        1.0000000000000000        1.0000000000000000     
+   1.0000000000000000        1.0000000000000000     
+   1.0000000000000000     
+       10000
+         100         100
+         100         100      100000
+  0.90000000000000002       0.50000000000000000               10  0.10000000000000001     
+   2.0000000000000000     
+ T
+ T           1
+ F
+ ndisp         192
+ Energy   71.111111111111072     
+ in mc runmode
+ mc_outp % nsweeps after averaging       10000
+ so far
+ so far
+ Number of attempted moves   1920000.0000000000     
+ Number of accepted moves   954277.00000000000      in per cent   49.701927083333331      %
+ Average potential energy   238.32239087681199     
+ Order parameter -6.81350557875473693E-003  3.89250461638206797E-003  2.06229674563180622E-002
+ Susceptibility. <P^2> - <P>^2   0.38939498165348885       0.30359416758539209       0.76950249423318418     
+ writing dynamical matrix
+ Done
+ writing dxdx matrix
+ Done

@@ -1,0 +1,14 @@
+.true. average_dyn_mat.dat !average_dVdx_dVdx.dat 
+.true. mom_4.dat 
+0
+bands_dyn_mat.dat
+.false.
+.false. cubic 1
+5 5
+0.0 0.0 0.0
+0.0 0.0 0.5
+0.0 0.5 0.5
+0.5 0.5 0.5
+0.0 0.0 0.0
+
+

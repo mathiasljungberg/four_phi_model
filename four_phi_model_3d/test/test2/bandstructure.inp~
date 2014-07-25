@@ -1,0 +1,14 @@
+1 average_dVdx_dVdx.dat 
+0 lala 
+0
+bands.dat
+.false.
+.false. cubic 1
+5 5
+0.0 0.0 0.0
+0.0 0.0 0.5
+0.0 0.5 0.5
+0.5 0.5 0.5
+0.0 0.0 0.0
+
+

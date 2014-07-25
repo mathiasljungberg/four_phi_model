@@ -1,0 +1,45 @@
+mc				! runmode
+None 0 1.0				! thermostat, thermostat_nsteps, thermostat_rate
+.false. mc_eq_1.0.restart	! restart, restart_file
+None                            ! restartmode
+mc_1.0				! basename for files
+4 4 4  				! supercell dimensions
+1.0d0 1.0d0 1.0d0 1.0d0 	! V_self (c1,c2,c3,c_harm)
+1.0d0 1.0d0 			! V_inter (c4,c5)
+1.0d0 				! mass
+10000 				! nsteps
+100 100				! n_dump, n_dump_traj (md: how often use info)
+100 100 100000			! av_step1, av_step2
+9.0d-1 0.5 10 0.1		! step (MC: controls amplitude of trial move)
+2.0				! temp in kB units
+.false.				! av_dyn !compute average dyn mat?
+.false.                         ! mom4_gamma
+.false. 1                       ! mom4_gamma_q, div_qpoints_4_mom
+.false.                         ! first_comp
+2                               ! nqpoints_qav  
+0.0 0.0 0.0
+0.5 0.5 0.5
+
+
+!  ! read input file from std in
+!  read(5,*) runmode  ! "test" or "mc" or "md"
+!  read(5,*) thermostat, thermostat_nsteps, thermostat_rate
+!  read(5,*) restart, restart_file
+!  read(5,*) restartmode
+!  read(5,*) basename ! for files
+!  !read(5,*) ucell
+!  read(5,*) supercell
+!  read(5,*) V_self
+!  read(5,*) V_inter
+!  read(5,*) mass
+!  read(5,*) nsteps 
+!  read(5,*) n_dump, n_dump_traj
+!  read(5,*) av_step1, av_step2, n_magic_step
+!  read(5,*) step, acc_target, n_adj_step, step_K  
+!  read(5,*) temp ! in k_b * T
+!  read(5,*) av_dyn
+!  read(5,*) mom4_gamma
+!  read(5,*) mom4_gamma_q, div_qpoints_4_mom
+!  read(5,*) first_comp
+!  read(5,*) nqpoints_qav
+

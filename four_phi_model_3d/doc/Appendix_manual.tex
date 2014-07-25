@@ -1,0 +1,85 @@
+\documentclass[a4paper, 10pt]{article}
+
+%\topmargin 0mm
+\footskip 15mm
+\oddsidemargin 8mm
+\evensidemargin 8mm
+\textwidth 152mm
+
+\setlength{\parindent}{0pt}     % tar bort indrag fr?n stycken
+\setlength{\parskip}{10pt}       % ?ndra s? att stycken skiljs av blankrader.
+%\setlength\arraycolsep {2pt}    % Snyggare eqnarray's
+%
+%\usepackage{graphics}
+\usepackage{graphicx}
+\usepackage{epsfig}
+\usepackage{amsmath}
+\usepackage{algorithmic}
+\begin{document}
+\bibliographystyle{unsrt}
+
+
+\title{Appendix to the manual of four phi model program} 
+\author{Mathias Ljungberg}
+\maketitle
+
+%\pagenumbering{roman}
+
+
+%\section*{The multi-atomic case}
+\section*{Potential function}
+
+\begin{equation}
+V = V_{self} + V_{inter}
+\end{equation}
+
+\begin{equation}
+V_{self} = V_{iso} + V_{aniso1} + V_{aniso2} + V_{harm}
+\end{equation}
+
+\begin{equation}
+V_{iso} = c_1 \sum_i ( |\bar u_i  |^2 -1 )^2
+\end{equation}
+
+\begin{equation}
+V_{aniso1} = c_2 \sum_i (  u_{i1}^2 u_{i2}^2 + u_{i1}^2u_{i3}^2 + u_{i2}^2u_{i3}^2 )  
+\end{equation}
+
+\begin{equation}
+V_{aniso2} = c_3 \sum_i (  u_{i1}^2 + u_{i2}^2 )  
+\end{equation}
+
+\begin{equation}
+V_{harm} = c_{harm} \sum_i  |u_{i} |^2   
+\end{equation}
+
+\begin{equation}
+V_{inter} = V_{inter1} + V_{inter2}
+\end{equation}
+
+\begin{equation}
+V_{inter1} = c_4 \frac{1}{2} \sum_{\langle ij \rangle} (\bar u_i -\bar u_j)^2 
+\end{equation}
+
+\begin{equation}
+V_{inter2} = c_5 \frac{1}{2} \sum_{\alpha} \sum_{\langle ij, \alpha \rangle} (u_{i\alpha} -\bar u_{j\alpha})^2 
+\end{equation}
+
+In total we then have
+
+\begin{equation}
+V_{self} =c_1 \sum_i ( |\bar u_i  |^2 -1 )^2 + c_2 \sum_i (  u_{i1}^2 u_{i2}^2 + u_{i1}^2u_{i3}^2 + u_{i2}^2u_{i3}^2 )  + c_3 \sum_i (  u_{i1}^2 + u_{i2}^2 )  + c_{harm} \sum_i  |u_{i} |^2  
+\end{equation}
+
+\begin{equation}
+V_{inter} = c_4 \frac{1}{2} \sum_{\langle ij \rangle} (\bar u_i -\bar u_j)^2 + c_5 \frac{1}{2} \sum_{\alpha} \sum_{\langle ij, \alpha \rangle} (u_{i\alpha} -\bar u_{j\alpha})^2 
+\end{equation}
+
+
+For $V_{inter2}$ the nearest neighbors are taken only in the direction $\alpha$, and the longitudinal force constant in this direction will thus be increased by $c_5$
+
+%\section*{Computing the derivatives in practice}
+
+\end{document}  
+
+

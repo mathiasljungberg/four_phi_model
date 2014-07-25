@@ -1,0 +1,485 @@
+program bandstructure
+  use parameters
+  use m_system_3d
+  use m_moment_fitting
+  use m_symmetry
+  implicit none
+
+  character(80):: infile, basename, infile_mom4, infile_mom4_2
+  integer:: nqpoints_inp, nqpoints2, nqpoints
+  real(kind=wp), allocatable:: qpoints_inp(:,:), qpoints(:,:)
+  real(kind=wp), allocatable:: fc(:,:), band(:,:)
+  
+  complex(kind=wp):: fc_q(3,3)
+  real(kind=wp):: fc_q_real(3,3), eig(3), eigvec(3,3), fc_q2(3,3)
+  real(kind=wp):: qp(3), vec(3)
+  integer:: supercell(3), cell1(3), cell2(3), cell12(3)
+  integer:: ndisp, cellnum1, cellnum2
+  integer:: i,j, i1,i2,i3,i4,i5,q,n, R, R_max, sign1, sign2, sign3, f1,f2, f3, j1,j2,j3, k
+  integer:: ii, jj, xyz
+  logical:: mom4_flag, first_comp_flag, sym_flag
+  real(kind=wp), allocatable::qpoints_4_mom(:,:), dyn_mat2(:,:,:,:)
+  real(kind=wp):: mom4_gamma(3), tmp
+  real(kind=wp), allocatable:: mode_susc(:,:,:), qpoints_mode_susc(:,:)
+  real(kind=wp), allocatable:: q_average(:,:), q2_average(:,:,:)
+  real(kind=wp):: mode_susc_n, eig_x(3), eigvec_x(3,3), fc_q_n, prefactor
+  integer::nqpoints_mode_susc
+  
+  real(kind=wp), allocatable:: Mat_symm(:,:,:)
+
+  ! read input
+  read(5,*) infile
+  read(5,*) infile_mom4
+  read(5,*) infile_mom4_2
+  read(5,*) basename
+  read(5,*) mom4_flag
+  read(5,*) first_comp_flag
+  read(5,*) sym_flag
+  read(5,*) nqpoints_inp, nqpoints2 
+  
+  allocate(qpoints_inp(nqpoints_inp,3))
+  do i=1,nqpoints_inp
+     read(5,*) qpoints_inp(i,:)
+  end do
+  
+  write(6,*) "so far.."
+  ! read mode suseptibilities 
+  open(unit=10, file="mode_susceptibilities.dat", status='old')
+
+  read(10,*) nqpoints_mode_susc
+  write(6,*) nqpoints_mode_susc
+  allocate(mode_susc(3,3,nqpoints_mode_susc), qpoints_mode_susc(nqpoints_mode_susc,3))
+  allocate(q_average(3,nqpoints_mode_susc), q2_average(3,3,nqpoints_mode_susc))
+  read(10,*) prefactor
+  read(10,*)
+
+  do q=1, nqpoints_mode_susc
+     read(10,*) qpoints_mode_susc(q,:)
+     write(6,*) qpoints_mode_susc(q,:)
+     read(10,*) q_average(:,q)
+     write(6,*) q_average(:,q)
+     read(10,*) q2_average(:,:,q)
+     read(10,*) 
+  end do
+  close(10)
+
+  ! symmetrize the mode susceptibilities to cubic symmetry
+  if(sym_flag) then
+    allocate(Mat_symm(3,3,48))
+    
+    call get_cubic_symm(Mat_symm)
+    
+     do q=1,nqpoints_mode_susc
+       call symmetrize_1(q_average(:,q), Mat_symm)
+       call symmetrize_2(q2_average(:,:,q), Mat_symm)
+     end do
+
+   end if
+
+  do q=1, nqpoints_mode_susc
+     do i=1,3
+        do j=1,3
+           mode_susc(i,j,q) = prefactor * ( q2_average(i,j,q) - q_average(i,q) * q_average(j,q) ) 
+        end do
+     end do
+
+     write(6,*) "q_average:", q_average(:,q)
+     write(6,*) "q2_average:", q2_average(:,:,q)
+     write(6,*) "mode_susc:", mode_susc(:,:,q)
+
+   end do
+
+
+  ! read dynamical matrix
+  open(unit=10, file=infile, status='old')
+  
+  read(10,*) supercell
+  ndisp =3*product(supercell)
+  allocate( fc(ndisp, 21))
+  
+  read(10,*) fc
+  
+  close(10)
+  
+  ! make the path in q-space
+  nqpoints = (nqpoints_inp -1) * nqpoints2 +1
+  allocate(qpoints(nqpoints,3), band(nqpoints,3))
+    
+  n=1
+  do i=1, nqpoints_inp-1
+     vec = qpoints_inp(i+1,:) - qpoints_inp(i,:) 
+     
+     do j=1,nqpoints2
+        qpoints(n,:) = qpoints_inp(i,:) + (dfloat(j-1) / nqpoints2) * vec
+        n=n+1
+     end do
+  end do
+  qpoints(nqpoints,:) = qpoints_inp(nqpoints_inp,:)
+
+  write(6,*) "q-points"
+  do i=1, nqpoints
+     write(6,*) qpoints(i,:)
+  end do
+
+
+  if (mom4_flag) then
+
+
+
+
+
+
+  open(12, file=basename, status='unknown')
+
+  open(13, file="eigenvectors.dat", status='unknown')
+
+  ! now calculate the band structure for each q-point
+  write(6,*) 
+  write(6,*) "Fitting in v-v"
+  write(6,*) "********************" 
+  write(6,*) 
+
+  do q=1, nqpoints
+     qp = qpoints(q,:)
+     
+     call compute_freq_fc(qp)
+
+  end do !q
+
+  write(6,*) 
+  write(6,*) "Fitting in x-x"
+  write(6,*) "********************" 
+  write(6,*) 
+
+  do q=1, nqpoints_mode_susc
+     qp = qpoints_mode_susc(q,:)
+     write(6,*) 
+     write(6,*) "considering q-point", qp
+     write(6,*) 
+     call compute_freq_x(qp)
+  end do
+
+contains
+
+subroutine compute_freq_fc(qp)
+  real(kind=wp), intent(in):: qp(3)
+
+  call compute_fc_q_real(qp, fc_q_real)
+
+    ! test the q-force constant routine for commensurate q-points
+    !write(11,*) fc_q_real
+    !
+    !call system_3d_get_fc_q2(supercell, fc, qp, qp, fc_q2)
+    !
+    !write(13,*) fc_q2
+  !stop
+  
+  call diagonalize(fc_q_real, eig, eigvec)
+  
+  write(13,*)  qp
+  write(13,*)  eigvec
+  write(13,*)
+  
+  ! for commensurate qpoints we can compute the frequencies from the first two moments of (x(0)-<x>)(x(t)-<x>)
+  ! freq_i = 1 / ( m * bet²a * (<x**2> -<x>**2))    suppose m=1
+  ! we suppose that the no
+  
+  !call get_q_space(supercell, mode_suscept_r, mode_suscept_q, qp)       
+  !mode_suscept_nq = matmul(eigvec, real(mode_suscept_q))
+  
+  ! for Gamma, compute fourth moment
+  if (q .eq. 1 ) then
+     
+     ! compute correction to gamma phonons
+     if (mom4_flag) then
+        
+        !assert that the first q-point given is Gamma
+        !if(sum(qp**2) .gt. 1e-10 ) then
+        !   
+        !   write(6,*) "First q-point is not Gamma! Cannot compute the fourth moments"
+        !   
+        !end if
+        
+        
+        !! old q-point routine
+        !if(.false.) then
+        !   call compute_mom4(eigvec, mom4_gamma)
+        !   
+        !   write(6,*)
+        !   write(6,*) "Gaussian fitting using moments in q-space" 
+        !   write(6,*)
+        !   
+        !   do i=1,3
+        !      write(6,*)
+        !      write(6,*) "frequeny_gamma",  sqrt(eig(i))
+        !      write(6,*) "mom2, mom4 ", eig(i),  mom4_gamma(i)
+        !      
+        !      call estimate_parameters_gaussian(eig(i), mom4_gamma(i))
+        !   end do
+        !end if
+        
+        ! new routine
+        call compute_mom4_new(eigvec, mom4_gamma)
+        
+        write(6,*)
+        write(6,*) "Gaussian fitting" 
+        write(6,*)
+        
+        do i=1,3
+           write(6,*)
+           write(6,*) "frequeny_gamma",  sqrt(eig(i))
+           write(6,*) "mom2, mom4 ", eig(i),  mom4_gamma(i)
+           
+           call estimate_parameters_gaussian(eig(i), mom4_gamma(i))
+           
+        end do
+        
+        write(6,*)
+        write(6,*) "Lorentzian fitting" 
+        write(6,*)
+        
+        do i=1,3
+           
+           write(6,*)
+           write(6,*) "frequeny_gamma",  sqrt(eig(i))
+           write(6,*) "mom2, mom4 ", eig(i),  mom4_gamma(i)
+           
+           call estimate_parameters_lorentzian(eig(i), mom4_gamma(i))
+           
+        end do
+        
+     end if
+     
+  end if ! 
+  
+  
+  do i=1,3
+     if (real(eig(i)) .ge. 0) then
+        band(q,i) = sqrt(eig(i))
+     else
+        band(q,i) = -sqrt(-eig(i))
+     end if
+  end do !i
+  
+  write(12,'(6ES18.10)') qp, band(q,:)
+     
+end subroutine compute_freq_fc
+
+subroutine compute_freq_x(qp)
+  real(kind=wp), intent(in):: qp(3)  
+
+  real(kind=wp):: mom2, mom4, mom6, d1,d2,d3
+
+  ! compute the modes and fitting from moments in q (mode susceptibilities)
+  write(6,*)
+  write(6,*) "Gaussian fitting using x-x correlation function" 
+  write(6,*)
+
+  ! symmetrize
+  !if (sym_flag) then
+  !   write(6,*) "symmetrizing mode_susc!"
+  !   call symmetrize(mode_susc(:,:,q))
+  !else
+  !   write(6,*) "not symmetrizing mode_susc!"
+  !end if
+
+  call diagonalize(mode_susc(:,:,q), eig_x, eigvec_x)
+  
+  call compute_fc_q_real(qp, fc_q_real)     
+
+  ! this works only for gamma at the moment
+  call compute_mom4_new(eigvec_x, mom4_gamma)
+  
+  do i=1,3
+     mode_susc_n = dot_product(eigvec_x(:,i), matmul(mode_susc(:,:,q), eigvec_x(:,i) ) ) 
+     write(6,*) eigvec_x(:,i), mode_susc_n
+     fc_q_n = dot_product(eigvec_x(:,i), matmul(fc_q_real, eigvec_x(:,i) ) ) 
+     
+     mom2 =  1.0_wp / mode_susc_n 
+     mom4 =  fc_q_n / mode_susc_n 
+     mom6 =  mom4_gamma(i) / mode_susc_n
+
+     write(6,*)
+     write(6,*) "frequeny_gamma",  sqrt(1.0_wp / mode_susc_n )
+     write(6,*) "mom2, mom4, mom6 ", mom2, mom4, mom6 
+     
+     call estimate_parameters_gaussian(mom2,  mom4)
+
+     call cont_fraction_parameters(mom2, mom4, mom6, d1,d2,d3)
+
+     write(6,*) "Continued fraction parameters", d1,d2,d3
+
+  end do
+  
+
+end subroutine compute_freq_x
+
+subroutine compute_mom4(eigvec, mom4_gamma)
+  real(kind=wp), intent(in):: eigvec(3,3)
+  real(kind=wp), intent(out):: mom4_gamma(3)
+
+  integer:: nqpoints_4_mom
+  integer:: i,a, q, i1,i2,i3, b
+
+  !read file     
+  open(unit=10, file=infile_mom4_2, status='old')
+  
+  read(10,*) nqpoints_4_mom
+  
+  allocate( qpoints_4_mom(nqpoints_4_mom,3), dyn_mat2(nqpoints_4_mom,3,3,3) )
+  
+  do i=1,  nqpoints_4_mom
+     read(10,*)  qpoints_4_mom(i,:), dyn_mat2(i,:,:,:) 
+  end do
+
+  if(sym_flag) then
+    do i=1, nqpoints_4_mom
+      call symmetrize_3(dyn_mat2(i,:,:,:), Mat_symm)
+    end do
+  end if
+
+  !calculate the fourth moments in the three gamma normal modes
+  mom4_gamma = 0.0_wp
+  
+  ! check eigenvectors
+  !write(6,*) "orthogonality of eigenvectors"
+  !do a=1,3
+  !   do b=1,3
+  !      write(6,*) a, b, sum(eigvec(:,a)*eigvec(:,b))
+  !   end do
+  !end do
+  !stop
+
+  do a =1,3 ! gamma normal modes
+     do q=1,nqpoints_4_mom ! q-points
+        do i1=1,3 ! alpha 
+           do i2=1,3 ! alpha'' 
+              do i3=1,3 ! alpha' 
+
+                 !if(sum(abs(qpoints_4_mom(q,:))) .lt. 1e-5_wp) then
+                    mom4_gamma(a) = mom4_gamma(a) + eigvec(i1,a) * &
+                      eigvec(i3, a) * dyn_mat2(q,i1,i2,i3)
+                 !end if
+
+              end do
+           end do
+        end do
+     end do
+  end do
+
+  !write(6,*) mom4_gamma
+  !write(6,*) product(supercell) 
+  !write(6,*) nqpoints_4_mom 
+  !write(6,*) mom4_gamma * product(supercell) / nqpoints_4_mom  
+  !mom4_gamma =  mom4_gamma * product(supercell) / nqpoints_4_mom  
+
+  close(10)
+
+end subroutine compute_mom4
+
+subroutine compute_mom4_new(eigvec, mom4_gamma)
+  real(kind=wp), intent(in):: eigvec(3,3)
+  real(kind=wp), intent(out):: mom4_gamma(3)
+
+  real(kind=wp):: mom4_gamma_tmp(3,3), tmp, tmp2
+  integer:: nqpoints_4_mom
+  integer:: i,a, q, i1,i2,i3, b
+
+  !read file     
+  open(unit=10, file=infile_mom4, status='old')
+  
+  !do i=1,9
+  !   read(10,* ) tmp, tmp2
+  !   write(6,*) tmp, tmp2
+  !end do
+
+  read(10,*) mom4_gamma_tmp
+
+  close(10)
+
+  if(sym_flag) then
+    call symmetrize_2(mom4_gamma_tmp, Mat_symm)
+  end if
+
+  mom4_gamma = 0.0_wp
+  
+  do a =1,3 ! gamma normal modes
+    do i1=1,3 ! alpha 
+      do i2=1,3 ! alpha'
+                 
+        mom4_gamma(a) =  mom4_gamma(a) + eigvec(i1,a) * &
+             eigvec(i2,a) * mom4_gamma_tmp(i1,i2)
+                 
+      end do
+    end do
+  end do
+ 
+end subroutine compute_mom4_new
+
+subroutine compute_fc_q_space(qp, fc_q)
+  real(kind=wp), intent(in):: qp(3)
+  complex(kind=wp), intent(out):: fc_q(3,3)  
+
+  ! average over all centers to get good statistics
+  do j1 = 0, supercell(1)-1 
+     do j2 = 0, supercell(2)-1 
+        do j3 = 0, supercell(3)-1 
+           
+           cell1 = (/j1,j2,j3/)
+           
+           call cell_to_cellnum(supercell, cell1, cellnum1)
+           
+           
+           do i4=1,3
+              do i5=1, 21
+                 
+                 call compressed_to_normal(supercell, 3 * cellnum1 + i4, i5, ii, jj)
+                 
+                 call coord_to_cellnum(jj, cellnum2, xyz)
+                 call cellnum_to_cell(supercell, cellnum2, cell2)
+                 
+                 call pbc(supercell,cell1-cell2, cell12)
+                 
+                 fc_q(i4,xyz) = fc_q(i4,xyz) + fc(ii, i5 ) * &
+                      exp(dcmplx(0, 2.0_wp * pi * dot_product(qp, dfloat(cell12))   ) )
+                 
+              end do !i5
+           end do !i4
+           
+        end do ! j3
+     end do ! j2
+  end do ! j1
+  
+end subroutine compute_fc_q_space
+
+subroutine compute_fc_q_real(qp, fc_q_real)
+  real(kind=wp), intent(in):: qp(3)
+  real(kind=wp), intent(out):: fc_q_real(3,3)
+  
+  fc_q = 0.0_wp     
+  
+  call compute_fc_q_space(qp, fc_q)     
+  
+  fc_q = fc_q / product(supercell)
+  
+  if( maxval(abs(imag(fc_q))) .gt. 1.0e-10 ) then
+     write(6,*) "Error, complex fq_q!"
+     !stop
+  else
+     fc_q_real = dreal(fc_q)
+  end if
+  
+  if (sym_flag) then
+    call symmetrize_2(fc_q_real, Mat_symm)  
+  end if
+
+  ! set all but 1,1 to 0, if first_comp_flag .eq. .true. 
+  if(first_comp_flag) then
+     tmp =fc_q_real(1,1)
+     fc_q_real =0.0_wp
+     fc_q_real(1,1) = tmp
+  end if
+  
+end subroutine compute_fc_q_real
+
+end program bandstructure

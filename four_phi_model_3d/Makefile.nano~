@@ -1,0 +1,30 @@
+F90=/opt/intel/impi/3.1/bin64/mpiifort  # nano
+F90FLAGS = -w -mp -L/home/mathias/fortranfiler/LIB -I/home/mathias/fortranfiler/LIB -L/opt/intel/mkl/10.0.3.020/lib/em64t -lmkl_scalapack_lp64 -lmkl_scalapack_lp64 -lmkl_blacs_lp64 -lmkl_lapack -lmkl_intel_lp64 -lmkl_intel_thread -lmkl_core -liomp5 # ifort/nano, without checkbounds for faster calculations
+
+four_phi_model_3d: parameters.mod m_linalg.o m_mc_parameters.o m_md_parameters.o hist_class.o m_averages.o m_system_3d.o m_averages_func.o m_mc_utils.o  m_system_3d_mc.o m_system_3d_md.o m_symmetry.o four_phi_model_3d.o
+	$(F90) $(F90FLAGS)  m_linalg.o m_mc_parameters.o m_md_parameters.o hist_class.o m_averages.o m_system_3d.o m_averages_func.o  m_mc_utils.o m_system_3d_mc.o m_system_3d_md.o m_symmetry.o four_phi_model_3d.o -o four_phi_model_3d
+
+TCF:  m_linalg.o m_system_3d.o  m_strings.o m_TCF.o m_symmetry.o TCF.o
+	$(F90) $(F90FLAGS) m_linalg.o  m_system_3d.o /home/mathias/fortranfiler/LIB/sffteu.o /home/mathias/fortranfiler/LIB/FFT_m.o m_strings.o m_TCF.o m_symmetry.o TCF.o -o TCF
+
+bandstructure:  m_linalg.o m_system_3d.o m_moment_fitting.o m_bandstructure.o m_symmetry.o  m_strings.o bandstructure.o 
+	$(F90) $(F90FLAGS)  m_linalg.o  m_system_3d.o m_moment_fitting.o m_bandstructure.o  m_symmetry.o  m_strings.o bandstructure.o -o bandstructure
+
+symmetrize_TCF: m_symmetry.o symmetrize_TCF.o
+	$(F90) $(F90FLAGS) m_symmetry.o symmetrize_TCF.o -o symmetrize_TCF
+
+all: four_phi_model_3d TCF bandstructure symmetrize_TCF symmetrize_TCF
+
+clean: 
+	rm *.o *.mod four_phi_model_3d TCF bandstructure symmetrize_TCF
+
+
+#all: @.f90
+#	$(F90) $(F90FLAGS) -c @.f90
+
+%.o: %.f90 
+	$(F90) $(F90FLAGS) -c $*.f90
+
+%.mod: %.f90
+	$(F90) $(F90FLAGS) -c $*.f90
+
