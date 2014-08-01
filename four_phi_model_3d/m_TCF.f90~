@@ -7,7 +7,7 @@ contains
   subroutine calculate_TCF(x_in, t_new, ft_tcf)
     complex(kind=wp), intent(in):: x_in(:,:)
     real(kind=wp), intent(in):: t_new(:)
-    real(kind=wp), intent(out):: ft_tcf(:,:,:)
+    complex(kind=wp), intent(out):: ft_tcf(:,:,:)
     
     complex(kind=wp), allocatable:: a_q(:), a_q2(:)
     integer:: j1, j2, size_x
@@ -24,8 +24,6 @@ contains
       !call atenuate_gaussian(a_q, t_new, alpha)
       call q_space_TCF_FFT(a_q, ft_tcf(:,j1,j1))
       
-      !sigma_IR = sigma_IR + ft_tcf(:,j1,j1) 
-      
     end do
     
     ! non-diagonals
@@ -40,7 +38,7 @@ contains
         
         call q_space_crossTCF_FFT(a_q, a_q2, ft_tcf(:, j1,j2))
         
-        ft_tcf(:, j2, j1) = ft_tcf(:, j1, j2)
+        ft_tcf(:, j2, j1) = conjg(ft_tcf(:, j1, j2))
         
       end do
     end do
@@ -52,7 +50,7 @@ contains
 
   subroutine write_TCF(file, ft_tcf, q, qpoint, omega)
     character(*), intent(in):: file
-    real(kind=wp), intent(in):: ft_tcf(:,:,:)
+    complex(kind=wp), intent(in):: ft_tcf(:,:,:)
     integer, intent(in):: q
     real(kind=wp), intent(in):: qpoint(3)
     real(kind=wp), intent(in):: omega(:)
@@ -60,19 +58,22 @@ contains
     character(80):: filename
     integer:: j1,j2
 
-    ! write files
-    do j1=1,3
-      do j2=j1,3
+    filename= file
+    call string_int_concatenate(filename,q)
+    call string_string_concatenate(filename,".dat")     
+    
+    npoints = size(omega)
+
+    open(10,file=filename,status='unknown')
+    
+    write(10,*) "# ", qpoint !s(q,:) 
         
-        filename= file
-        call string_int_concatenate(filename,q)
-        call string_int_concatenate(filename,j1)
-        call string_int_concatenate(filename,j2)
-        call string_string_concatenate(filename,".dat")     
-        call write_file(filename, qpoint, ft_tcf(:,j1,j2), omega)        
-        
-      end do
+    do i =1, npoints
+      write(10,'(10ES18.10)') omega(i) , dreal(ft_tcf(i,1,1)), dreal(ft_tcf(i,2,2)), dreal(ft_tcf(i,3,3)), &
+           ft_tcf(i,2,3), ft_tcf(i,1,3), ft_tcf(i,1,2)
     end do
+    
+    close(10)
     
   end subroutine write_TCF
 
@@ -215,19 +216,24 @@ end subroutine q_space_TCF
 subroutine q_space_TCF_FFT(x1, ft_tcf)
   implicit none
   complex(kind=wp), intent(in):: x1(:)
-  !complex(kind=wp), intent(out):: tcf2(:,:,:) 
-  real(kind=wp), intent(out):: ft_tcf(:)
+  complex(kind=wp), intent(out):: ft_tcf(:)
 
   real(kind=wp), allocatable:: ft_tcf_real(:), ft_tcf_imag(:)
+  complex(kind=wp), allocatable:: ft_tcf_tmp(:)
   integer:: j1,j2
   
   allocate(ft_tcf_real(size(ft_tcf)), ft_tcf_imag(size(ft_tcf)))
+  allocate(ft_tcf_tmp(size(ft_tcf)))
   
   call FFT( dimag(x1), dreal(x1), ft_tcf_real, ft_tcf_imag,1)  
+  
+  ft_tcf_tmp = dcmplx( ft_tcf_real, ft_tcf_imag)
 
-  ft_tcf = ft_tcf_real**2 + ft_tcf_imag**2
+  !ft_tcf = ft_tcf_real**2 + ft_tcf_imag**2
+  ft_tcf = ft_tcf_tmp * conjg(ft_tcf_tmp)
 
   deallocate(ft_tcf_real, ft_tcf_imag)
+  deallocate(ft_tcf_tmp)
 
 end subroutine q_space_TCF_FFT
 
@@ -235,22 +241,29 @@ subroutine q_space_crossTCF_FFT(x1, x2, ft_tcf)
   implicit none
   complex(kind=wp), intent(in):: x1(:), x2(:)
   !complex(kind=wp), intent(out):: tcf2(:,:,:) 
-  real(kind=wp), intent(out):: ft_tcf(:)
+  complex(kind=wp), intent(out):: ft_tcf(:)
 
   real(kind=wp), allocatable:: ft_tcf_real1(:), ft_tcf_imag1(:)
   real(kind=wp), allocatable:: ft_tcf_real2(:), ft_tcf_imag2(:)
+  complex(kind=wp), allocatable:: ft_tcf_tmp1(:), ft_tcf_tmp2(:)
   integer:: j1,j2
   
   allocate(ft_tcf_real1(size(ft_tcf)), ft_tcf_imag1(size(ft_tcf)))
   allocate(ft_tcf_real2(size(ft_tcf)), ft_tcf_imag2(size(ft_tcf)))
+  allocate(ft_tcf_tmp1(size(ft_tcf)), ft_tcf_tmp2(size(ft_tcf)))
   
   call FFT( dreal(x1), dimag(x1), ft_tcf_real1, ft_tcf_imag1,1)  
   call FFT( dreal(x2), dimag(x2), ft_tcf_real2, ft_tcf_imag2,1)  
 
-  ft_tcf = ft_tcf_real1 * ft_tcf_real2 + ft_tcf_imag1 * ft_tcf_imag2
+  !ft_tcf = ft_tcf_real1 * ft_tcf_real2 + ft_tcf_imag1 * ft_tcf_imag2
+  ft_tcf_tmp1 = dcmplx(ft_tcf_real1, ft_tcf_imag1)
+  ft_tcf_tmp2 = dcmplx(ft_tcf_real2, ft_tcf_imag2)
+
+  ft_tcf = ft_tcf_tmp1 * conjg(ft_tcf_tmp2)
 
   deallocate(ft_tcf_real1, ft_tcf_imag1)
   deallocate(ft_tcf_real2, ft_tcf_imag2)
+  deallocate(ft_tcf_tmp1,ft_tcf_tmp2)
 
 end subroutine q_space_crossTCF_FFT
 

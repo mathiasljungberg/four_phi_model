@@ -1,6 +1,6 @@
 module m_TCF
   use parameters
-  use FFT_m
+  use m_FFT
   use m_strings
 contains
 

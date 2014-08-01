@@ -1,37 +1,37 @@
 F90=gfortran 
 
-#F90FLAGS = -I/Users/mathias/work/work_bcn/fortranfiler/LIB -J/Users/mathias/work/work_bcn/fortranfiler/four_phi_model_3d/devel -fno-underscoring -fbounds-check -ffree-line-length-none -framework vecLib # gfortran/mac lion
+F90FLAGS = -I/Users/mathias/work/work_bcn/fortranfiler/LIB -J/Users/mathias/work/work_bcn/fortranfiler/four_phi_model_3d/devel -fno-underscoring -fbounds-check -ffree-line-length-none -framework vecLib # gfortran/mac lion
 
-F90FLAGS = -J/Users/mathias/work/work_bcn/fortranfiler/four_phi_model_3d/devel -fno-underscoring -fbounds-check -ffree-line-length-none -framework vecLib # gfortran/mac lion
+#F90FLAGS = -J/Users/mathias/work/work_bcn/fortranfiler/four_phi_model_3d/devel -fno-underscoring -fbounds-check -ffree-line-length-none -framework vecLib # gfortran/mac lion
 
 four_phi_model_3d: parameters.mod m_linalg.o m_mc_parameters.o m_md_parameters.o hist_class.o m_averages.o m_system_3d.o m_averages_func.o m_mc_utils.o  m_system_3d_mc.o m_system_3d_md.o m_symmetry.o four_phi_model_3d.o
 	$(F90) $(F90FLAGS)  m_linalg.o m_mc_parameters.o m_md_parameters.o hist_class.o m_averages.o m_system_3d.o m_averages_func.o  m_mc_utils.o m_system_3d_mc.o m_system_3d_md.o m_symmetry.o four_phi_model_3d.o -o four_phi_model_3d
 
-#TCF:  m_linalg.o m_system_3d.o m_strings.o m_TCF.o  m_symmetry.o TCF.o 
-#	$(F90) $(F90FLAGS)   m_linalg.o m_system_3d.o /Users/mathias/work/work_bcn/fortranfiler/LIB/sffteu.o /Users/mathias/work/work_bcn/fortranfiler/LIB/FFT_m.o m_strings.o m_TCF.o m_symmetry.o TCF.o -o TCF
+TCF:  m_linalg.o m_system_3d.o m_strings.o m_TCF.o  m_symmetry.o TCF.o 
+	$(F90) $(F90FLAGS)   m_linalg.o m_system_3d.o /Users/mathias/work/work_bcn/fortranfiler/LIB/sffteu.o /Users/mathias/work/work_bcn/fortranfiler/LIB/FFT_m.o m_strings.o m_TCF.o m_symmetry.o TCF.o -o TCF
 
-bandstructure:  m_linalg.o m_system_3d.o m_moment_fitting.o m_strings.o m_bandstructure.o m_symmetry.o  bandstructure.o 
-	$(F90) $(F90FLAGS)  m_linalg.o  m_system_3d.o m_moment_fitting.o m_strings.o m_bandstructure.o  m_symmetry.o  bandstructure.o -o bandstructure
+bandstructure:  m_linalg.o m_system_3d.o m_moment_fitting.o m_bandstructure.o m_symmetry.o  m_strings.o bandstructure.o 
+	$(F90) $(F90FLAGS)  m_linalg.o  m_system_3d.o m_moment_fitting.o m_bandstructure.o  m_symmetry.o  m_strings.o bandstructure.o -o bandstructure
 
-#symmetrize_TCF: m_symmetry.o symmetrize_TCF.o
-#	$(F90) $(F90FLAGS) m_symmetry.o symmetrize_TCF.o -o symmetrize_TCF
+symmetrize_TCF: m_symmetry.o symmetrize_TCF.o
+	$(F90) $(F90FLAGS) m_symmetry.o symmetrize_TCF.o -o symmetrize_TCF
 
-#add_ft_tcf: add_ft_tcf.o
-#	$(F90) $(F90FLAGS) add_ft_tcf.o -o add_ft_tcf
+add_ft_tcf: add_ft_tcf.o
+	$(F90) $(F90FLAGS) add_ft_tcf.o -o add_ft_tcf
 
 normalize: normalize.o
 	$(F90) $(F90FLAGS) normalize.o -o normalize
 
-#all: four_phi_model_3d TCF bandstructure symmetrize_TCF symmetrize_TCF add_ft_tcf normalize
+all: four_phi_model_3d TCF bandstructure symmetrize_TCF symmetrize_TCF add_ft_tcf normalize
 
 
-#clean: 
-#	rm *.o *.mod four_phi_model_3d TCF bandstructure symmetrize_TCF add_ft_tcf normalize
+clean: 
+	rm *.o *.mod four_phi_model_3d TCF bandstructure symmetrize_TCF add_ft_tcf normalize
 
-all: four_phi_model_3d bandstructure normalize
-
-clean:
-	rm *.o *.mod four_phi_model_3d bandstructure normalize
+#all: four_phi_model_3d
+#
+#clean:
+#	rm *.o *.mod four_phi_model_3d
 
 #all: @.f90
 #	$(F90) $(F90FLAGS) -c @.f90
