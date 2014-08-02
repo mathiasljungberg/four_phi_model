@@ -8,6 +8,53 @@ module m_system_3d_md
 
 contains
 
+  subroutine perform_molecular_dynamics(system, inp, md_params, md_outp, av)
+    use m_input, only: t_input
+    
+    type(system_3d), intent(inout):: system
+    type(t_input), intent(in):: inp
+    type(md_parameters), intent(inout):: md_params
+    type(md_output), intent(inout)::  md_outp
+    type(averages), intent(inout):: av
+
+    integer:: i
+
+    call md_parameters_init(md_params, inp)
+    call md_initialize_files(md_params, inp % basename)
+    
+    if(inp % restart) then
+      call system_3d_read_restart(system, 10, inp % restart_file)       
+      write(6,*) "read restart file", inp % restart_file
+      
+      if(inp % restartmode .eq. "set_random_velocities") then
+        call md_set_initial_velocities_random(system, md_params, .true.)
+        write(6,*) "Reset velocities: boltzmann sampling, T=", system_3d_get_temperature(system)
+       end if
+       
+     else
+       !call md_set_inital_velocities(system, md_params)
+       call md_set_random(system, md_params)
+     end if
+     
+     if (md_params % first_comp) then
+       call md_set_initial_velocities_random(system, md_params,.false.)
+       system % displacements =0.0_wp
+       
+      do i=1,system % nparticles
+        system % displacements(3*(i-1) +2) =0.0_wp
+        system % displacements(3*(i-1) +3) =0.0_wp
+        system % velocities(3*(i-1) +2) =0.0_wp
+        system % velocities(3*(i-1) +3) =0.0_wp
+        system % accelerations(3*(i-1) +2) =0.0_wp
+        system % accelerations(3*(i-1) +3) =0.0_wp
+      end do
+    end if
+    
+    call molecular_dynamics(system, md_params, md_outp, av)
+
+  end subroutine perform_molecular_dynamics
+
+
   subroutine molecular_dynamics(system, md_params, md_outp, av)
     type(system_3d), intent(inout):: system
     type(md_parameters), intent(in):: md_params

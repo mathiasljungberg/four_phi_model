@@ -1,6 +1,5 @@
 program four_phi_model_3d
   use parameters
-  use hist_class
   use m_mc_parameters
   use m_md_parameters
   use m_linalg
@@ -10,91 +9,28 @@ program four_phi_model_3d
   use m_averages
   use m_averages_func ! remove later
   use m_symmetry
+  use m_input, only: t_input
+  use m_input, only: read_input
   implicit none
 
+  type(t_input):: inp
   type(system_3d):: system
   type(mc_parameters):: mc_params
   type(md_parameters):: md_params
   type(mc_output):: mc_outp
   type(md_output):: md_outp
   type(averages):: av
-  integer:: supercell(3), nsteps_eq, nsteps
-  !real(kind=wp),allocatable, dimension(:)::  displacements_tot
-  real(kind=wp):: V_self(4), V_inter(2), mass, temp, step, ucell(3)
-  character(80)::runmode, restartmode, basename, thermostat, restart_file
-  real(kind=wp)::  Energy, der1, der2, der3, der4
-  real(kind=wp)::  Energy_tot, der1_tot, der2_tot, der3_tot, der4_tot, der11_tot, der13_tot, der22_tot
-  type(hist):: hist_x1, hist_x2, hist_x3
-  integer:: n_dump, n_dump_traj, thermostat_nsteps
-  integer:: av_step1, av_step2, n_magic_step
-  logical:: av_dyn, restart, mom4_gamma, mom4_gamma_q, first_comp
 
-  real(kind=wp)::der(3)
-  
-  integer::i,j,ii, q
-  integer:: div_qpoints_4_mom
+  integer::i,j,ii !, q
   
   integer::clock, size_n
   integer, allocatable:: seed_clock(:)
   
-  real(kind=wp), allocatable:: qpoints_qav(:,:)
-  integer:: nqpoints_qav, n_adj_step
+  !
+  ! This program describes a 3-d lattice with a double well for each particle plus harmonic couplings between them
+  !
 
-  real(kind=wp):: acc_target, step_K
-  real(kind=wp):: thermostat_rate
-
-  ! this program describes a 3-d lattice with a double well for each particle plus coupling sbetween them
-
-  ! read input file from std in
-  read(5,*) runmode  ! "test" or "mc" or "md"
-  read(5,*) thermostat, thermostat_nsteps, thermostat_rate
-  read(5,*) restart, restart_file
-  read(5,*) restartmode
-  read(5,*) basename ! for files
-  !read(5,*) ucell
-  read(5,*) supercell
-  read(5,*) V_self
-  read(5,*) V_inter
-  read(5,*) mass
-  read(5,*) nsteps 
-  read(5,*) n_dump, n_dump_traj
-  read(5,*) av_step1, av_step2, n_magic_step
-  read(5,*) step, acc_target, n_adj_step, step_K  
-  read(5,*) temp ! in k_b * T
-  read(5,*) av_dyn
-  read(5,*) mom4_gamma
-  read(5,*) mom4_gamma_q, div_qpoints_4_mom
-  read(5,*) first_comp
-  read(5,*) nqpoints_qav
-  
-  allocate(qpoints_qav(3, nqpoints_qav))
-  do q=1,  nqpoints_qav
-     read(5,*) qpoints_qav(:,q)
-  end do
-
-  ! echo input
-  write(6,*) "input parameters"
-  write(6,*) "****************"
-  write(6,*) runmode  ! "test" or "mc" or "md"
-  write(6,*) thermostat, thermostat_nsteps
-  write(6,*) restart, restart_file
-  write(6,*) basename ! for files
-  !write(6,*) ucell
-  write(6,*) supercell
-  write(6,*) V_self
-  write(6,*) V_inter
-  write(6,*) mass
-  !write(6,*) nsteps_eq, nsteps !mc_params % nsweeps_eq, mc_params % nsweeps 
-  write(6,*) nsteps 
-  write(6,*) n_dump, n_dump_traj
-  write(6,*) av_step1, av_step2, n_magic_step
-  write(6,*) step, acc_target, n_adj_step, step_K    
-  write(6,*) temp ! in k_b * T
-  write(6,*) av_dyn
-  write(6,*) mom4_gamma, div_qpoints_4_mom
-  write(6,*) first_comp
-
-  call system_3d_init(system, supercell)
+  call read_input(5, inp)
 
   ! initalize random numbers
   call system_clock(count=clock)
@@ -104,131 +40,27 @@ program four_phi_model_3d
   call random_seed(put=seed_clock)
   deallocate(seed_clock)
 
-  system % masses = mass
-  system % masses_p = mass
-  system % V_self = V_self
-  system % V_inter = V_inter
-  system % ucell = (/2.5_wp, 2.5_wp, 2.5_wp/)
-
-  write(6,*) "ndisp", system % ndisp
-
- !write(6,* ) system % displacements 
- !write(6,* ) system % velocities 
- !write(6,* ) system % masses 
- !write(6,* ) system % V_self 
- !write(6,* ) system % V_inter 
-
-  ! set displacements to ground state geometry
-  !system % displacements(:) =  1.0_wp  / sqrt(3.0_wp) 
-  do i=1, system % nparticles
-     system % displacements(3*(i-1) +1) =  1.0_wp  / sqrt(3.0_wp) 
-  end do
+  ! iniitalize system
+  call system_3d_init_inp(system,inp)
   
-  Energy = system_3d_get_potential_energy(system)
-  write(6,*) "Energy", Energy
+  ! initialize averages
+  call averages_init(av,inp)
 
-  av % av_dyn = av_dyn
-  av % mom4_gamma = mom4_gamma
-  av % mom4_gamma_q = mom4_gamma_q
-  av % av_step1 = av_step1
-  av % av_step2 = av_step2
-  av % div_qpoints_4_mom = div_qpoints_4_mom
-  av %  nqpoints_qav = nqpoints_qav 
-  allocate(av % qpoints_qav(3,av % nqpoints_qav))
-  av % qpoints_qav = qpoints_qav
-
-
-  if (runmode .eq. "test") then
+  if (inp % runmode .eq. "test") then
      write(6,*) "in test runmode"
      call test
      
-  else if(runmode .eq. "mc") then
+  else if(inp % runmode .eq. "mc") then
      write(6,*) "in mc runmode"
 
-    mc_params % step  = step * sqrt(temp)
-    mc_params % acc_target = acc_target
-    mc_params % n_adj_step = n_adj_step
-    mc_params % step_K = step_K
-    mc_params % beta = 1.0_wp / (temp) ! 1.0_wp / (k_b * temp)
-    mc_params % nsweeps = nsteps
-    mc_params % n_magic_step = n_magic_step
-    mc_params % first_comp = first_comp
-
-    mc_outp % nsweeps = 0
-    mc_outp % nmoves = 0.0_wp
-    mc_outp % acc = 0.0_wp
-    mc_outp % energy = Energy
-    mc_outp % energy = Energy
-
-
-    call mc_initialize_files(mc_params, basename)
-
-    if(restart) then
-       call system_3d_read_restart(system, 10, restart_file)       
-       write(6,*) "read restart file", restart_file
-    end if
-
-    if(first_comp) then
-      do i=1,system % ndisp
-        if (mod(i,3).ne.0) then
-          system % displacements(i) = 0.0_wp
-        end if
-      end do
-    end if
-
-    !write(6,*) mc_params % step
-
-    call monte_carlo(system, mc_params, mc_outp, av)
+     call perform_monte_carlo(system, inp, mc_params, mc_outp, av)
      
-  else if(runmode .eq. "md") then
-
-    md_params % nsteps_eq = nsteps_eq
-    md_params % nsteps = nsteps
-    md_params % beta = 1.0_wp / (temp) ! 1.0_wp / (k_b * temp)
-    md_params % dt  = step
-    md_params % n_traj_E = n_dump
-    md_params % n_traj_disp = n_dump_traj
-    md_params % thermostat = thermostat
-    md_params % thermostat_nsteps = thermostat_nsteps
-    md_params % thermostat_rate = thermostat_rate
-    md_params % first_comp = first_comp
-
-    call md_initialize_files(md_params, basename)
-
-    if(restart) then
-       call system_3d_read_restart(system, 10, restart_file)       
-       write(6,*) "read restart file", restart_file
-
-       if(restartmode .eq. "set_random_velocities") then
-         call md_set_initial_velocities_random(system, md_params, .true.)
-         write(6,*) "Reset velocities: boltzmann sampling, T=", system_3d_get_temperature(system)
-       end if
-
-    else
-       !call md_set_inital_velocities(system, md_params)
-       call md_set_random(system, md_params)
-    end if
-
-    if (md_params % first_comp) then
-      call md_set_initial_velocities_random(system, md_params,.false.)
-      system % displacements =0.0_wp
-
-      do i=1,system % nparticles
-        system % displacements(3*(i-1) +2) =0.0_wp
-        system % displacements(3*(i-1) +3) =0.0_wp
-        system % velocities(3*(i-1) +2) =0.0_wp
-        system % velocities(3*(i-1) +3) =0.0_wp
-        system % accelerations(3*(i-1) +2) =0.0_wp
-        system % accelerations(3*(i-1) +3) =0.0_wp
-      end do
-    end if
-    
-    call molecular_dynamics(system, md_params, md_outp, av)
+  else if(inp % runmode .eq. "md") then
     
   else 
     write(6,*) 'runmode must be either "test", "mc", or "md"' 
   end if
-
+  
 contains
   
   subroutine test
@@ -313,7 +145,7 @@ contains
     !real(kind=wp):: delta1, delta2
     integer::i
     real(kind=wp), allocatable:: delta1(:), delta2(:)
-    real(kind=wp):: rel_error
+    real(kind=wp):: rel_error, Energy
 
     allocate(delta1(system %ndisp), delta2(system %ndisp))
 
@@ -416,7 +248,7 @@ contains
   subroutine test_harmonic_fc
     real(kind=wp),allocatable, dimension(:,:)::  fc, fc2, eigvec
     real(kind=wp),allocatable, dimension(:)::  eig, gradient, gradient_new, eig_fc
-    real(kind=wp):: rel_error
+    real(kind=wp):: rel_error, step
     integer:: i,j,ii,jj, k1, k2
     
 
@@ -521,7 +353,7 @@ contains
     call system_3d_get_fc(system, fc)
     call system_3d_get_fc_compressed(system, fc_comp)
 
-    call compressed_fc_to_normal_fc(supercell, fc_comp, fc2)
+    call compressed_fc_to_normal_fc(inp % supercell, fc_comp, fc2)
     
     rel_error = maxval(abs(fc-fc2)) / (maxval(fc) - minval(fc))
 
@@ -559,7 +391,7 @@ contains
 
     call system_3d_get_dxdx_compressed(system, fc_comp)
 
-    call compressed_fc_to_normal_fc(supercell, fc_comp, fc2)
+    call compressed_fc_to_normal_fc(inp % supercell, fc_comp, fc2)
     
     rel_error = maxval(abs(fc-fc2)) / (maxval(fc) - minval(fc))
 
@@ -710,6 +542,9 @@ contains
 
   subroutine test_lookup_cell
     integer:: i,j,k, cellnum, cell(3)
+    integer:: supercell(3)
+
+    supercell = inp % supercell
 
     do i=-2*supercell(1),2*supercell(1)
       do j=-2*supercell(2),2*supercell(2)
@@ -756,8 +591,11 @@ contains
   subroutine test_1d
     integer:: i
     real(kind=wp):: Energy, E0, k, C
+    real(wp):: V_self(4)
 
-    if(first_comp) then
+    V_self = inp % V_self
+
+    if(inp % first_comp) then
 
       ! test the harmonic case
       system % displacements = 0.0_wp
@@ -784,7 +622,7 @@ contains
     end if ! first comp
 
     ! test the boltzman distribution
-    md_params % beta =  1.0_wp / (temp)
+    md_params % beta =  1.0_wp / (inp % temp)
 
     call md_set_initial_velocities_random(system, md_params, .false.)
 

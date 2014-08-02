@@ -22,6 +22,7 @@ module m_system_3d
 contains
   ! constructor  
   subroutine system_3d_init(system, supercell)
+
     type(system_3d), intent(inout):: system
     integer, intent(in):: supercell(3)
     
@@ -46,6 +47,48 @@ contains
     call system_3d_create_lookup_cell(system)
 
   end subroutine system_3d_init
+
+  ! constructor  
+  subroutine system_3d_init_inp(system, inp)
+    use m_input, only: t_input
+
+    type(system_3d), intent(inout):: system
+    type(t_input), intent(in):: inp
+
+    integer::i 
+    
+    
+    system % supercell = inp %supercell
+    system % nparticles = product(inp % supercell)
+    system % ndisp = system % nparticles * 3
+
+    allocate(system % displacements(system %ndisp), system % velocities(system %ndisp), &
+         system % accelerations(system %ndisp), &
+         system % masses_p(system % nparticles), &
+         system % masses(system % ndisp) )
+
+    system % displacements = 0.0_wp 
+    system % velocities = 0.0_wp 
+    system % velocities = 0.0_wp
+    
+    system % masses_p = inp % mass
+    system % masses = inp % mass
+    system % V_self = inp % V_self
+    system % V_inter = inp % V_inter
+    system % ucell = (/2.5_wp, 2.5_wp, 2.5_wp/)
+
+    call system_3d_create_lookup_cell(system)
+
+    write(6,*) "ndisp", system % ndisp
+    
+    ! set displacements to ground state geometry
+    !system % displacements(:) =  1.0_wp  / sqrt(3.0_wp) 
+    do i=1, system % nparticles
+      system % displacements(3*(i-1) +1) =  1.0_wp  / sqrt(3.0_wp) 
+    end do
+    
+  end subroutine system_3d_init_inp
+
 
   ! destructor
   subroutine system_3d_final(system)

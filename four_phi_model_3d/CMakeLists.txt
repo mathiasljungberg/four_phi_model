@@ -58,9 +58,13 @@ m_bandstructure.F90             m_system_3d.F90
 hist_class.F90                  m_linalg.F90                    m_moment_fitting.F90            m_system_3d_mc.F90              parameters.F90
 m_TCF.F90                       m_mc_parameters.F90             m_system_3d_mc_scalar.F90       
 m_averages.F90                  m_mc_utils.F90                  m_strings.F90                   m_system_3d_md.F90
+m_input.F90
 )
 
 SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/m_FFT.o" "/Users/mathias/work/fortran-utilities_build/sffteu.o")
+
+#SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/libfortran-utilities.a")
+#EXTERNAL_LIBRARY_ADD("/Users/mathias/work/fortran-utilities_build/libfortran-utitlities.a")
 
 SET(EXECUTABLES four_phi_model_3d bandstructure)
 

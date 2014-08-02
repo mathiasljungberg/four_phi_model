@@ -8,6 +8,43 @@ module m_system_3d_mc
   implicit none
   
 contains
+  
+  subroutine perform_monte_carlo(system, inp, mc_params, mc_outp, av)
+    use m_input, only: t_input
+
+    type(system_3d), intent(inout):: system
+    type(t_input), intent(in):: inp
+    type(mc_parameters), intent(inout):: mc_params
+    type(mc_output), intent(inout):: mc_outp
+    type(averages), intent(inout):: av
+
+    real(wp):: Energy
+    integer:: i
+    
+    call mc_parameters_init(mc_params, inp)
+
+    Energy = system_3d_get_potential_energy(system)
+    write(6,*) "Energy", Energy
+
+    call mc_output_init(mc_outp, inp, Energy)
+    call mc_initialize_files(mc_params, inp % basename)
+     
+    if(inp % restart) then
+       call system_3d_read_restart(system, 10, inp % restart_file)       
+       write(6,*) "read restart file", inp % restart_file
+    end if
+
+    if(inp % first_comp) then
+      do i=1,system % ndisp
+        if (mod(i,3).ne.0) then
+          system % displacements(i) = 0.0_wp
+        end if
+      end do
+    end if
+
+    call monte_carlo(system, mc_params, mc_outp, av)
+
+  end subroutine perform_monte_carlo
 
   subroutine monte_carlo(system, mc_params, mc_outp, av)
     type(system_3d), intent(inout):: system

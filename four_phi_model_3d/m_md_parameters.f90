@@ -20,5 +20,26 @@ module m_md_parameters
 
   end type md_output
 
+contains
+
+  subroutine md_parameters_init(md_params, inp)
+    use m_input, only: t_input
+
+    type(md_parameters), intent(inout):: md_params
+    type(t_input), intent(in):: inp
+
+    md_params % nsteps_eq = inp % nsteps_eq
+    md_params % nsteps = inp % nsteps
+    md_params % beta = 1.0_wp / (inp % temp) ! 1.0_wp / (k_b * temp)
+    md_params % dt  = inp % step
+    md_params % n_traj_E = inp % n_dump
+    md_params % n_traj_disp = inp % n_dump_traj
+    md_params % thermostat = inp % thermostat
+    md_params % thermostat_nsteps = inp % thermostat_nsteps
+    md_params % thermostat_rate = inp % thermostat_rate
+    md_params % first_comp = inp % first_comp
+
+  end subroutine md_parameters_init
+
 end module m_md_parameters
 

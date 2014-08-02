@@ -52,5 +52,26 @@ module m_averages
 
 
   end type averages
+
+contains
   
+  subroutine averages_init(av, inp)
+    use m_input, only: t_input
+    
+    type(averages), intent(inout):: av
+    type(t_input), intent(in):: inp
+    
+    ! initalize averages
+    av % av_dyn = inp % av_dyn
+    av % mom4_gamma = inp % mom4_gamma
+    av % mom4_gamma_q = inp % mom4_gamma_q
+    av % av_step1 = inp % av_step1
+    av % av_step2 = inp % av_step2
+    av % div_qpoints_4_mom = inp % div_qpoints_4_mom
+    av %  nqpoints_qav = inp % nqpoints_qav 
+    allocate(av % qpoints_qav(3,av % nqpoints_qav))
+    av % qpoints_qav = inp % qpoints_qav
+
+  end subroutine averages_init
+
 end module m_averages
