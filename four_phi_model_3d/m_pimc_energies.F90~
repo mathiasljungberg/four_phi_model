@@ -1,0 +1,15 @@
+module m_pimc_energies
+  implicit none
+contains
+
+  subroutine pimc_get_potential_action
+
+  subroutine pimc_get_knetic_action
+
+
+  subroutine pimc_get_delta_potential_action
+
+  subroutine pimc_get_delta_kinetic_action
+
+
+end module m_pimc_energies

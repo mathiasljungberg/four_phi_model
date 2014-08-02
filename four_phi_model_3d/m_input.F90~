@@ -1,0 +1,15 @@
+module m_input
+  implicit none
+  
+  type t_input
+
+  end type t_input
+
+contains
+
+subroutine read_input(ifile, inp)
+  type(t_input):: inp
+  
+end subroutine read_input
+
+end module m_input
