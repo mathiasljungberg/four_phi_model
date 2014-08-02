@@ -54,8 +54,11 @@ program four_phi_model_3d
      write(6,*) "in mc runmode"
 
      call perform_monte_carlo(system, inp, mc_params, mc_outp, av)
-     
-  else if(inp % runmode .eq. "md") then
+
+  else if(inp % runmode .eq. "pimc") then
+     write(6,*) "So, you want to do pimc? implementation is underway..."
+
+   else if(inp % runmode .eq. "md") then
     
   else 
     write(6,*) 'runmode must be either "test", "mc", or "md"' 
