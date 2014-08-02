@@ -62,6 +62,7 @@ m_input.F90
 m_pimc.F90 
 m_t_pimc_parameters.F90
 m_pimc_energies.F90
+m_test.F90
 )
 
 SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/m_FFT.o" "/Users/mathias/work/fortran-utilities_build/sffteu.o")
