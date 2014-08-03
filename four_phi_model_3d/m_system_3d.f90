@@ -55,9 +55,6 @@ contains
     type(system_3d), intent(inout):: system
     type(t_input), intent(in):: inp
 
-    integer::i 
-    
-    
     system % supercell = inp %supercell
     system % nparticles = product(inp % supercell)
     system % ndisp = system % nparticles * 3
@@ -81,13 +78,21 @@ contains
 
     write(6,*) "ndisp", system % ndisp
     
-    ! set displacements to ground state geometry
+  end subroutine system_3d_init_inp
+
+  subroutine set_geometry_tetragonal(system)
+    type(system_3d), intent(inout):: system
+
+    integer::i 
+
+    ! set displacements to ground state geometry (tetragonal)
     !system % displacements(:) =  1.0_wp  / sqrt(3.0_wp) 
     do i=1, system % nparticles
       system % displacements(3*(i-1) +1) =  1.0_wp  / sqrt(3.0_wp) 
     end do
-    
-  end subroutine system_3d_init_inp
+
+  end subroutine set_geometry_tetragonal
+
 
 
   ! destructor
@@ -262,7 +267,7 @@ contains
              d =  d_tmp(1)*d_tmp(2) + d_tmp(1)*d_tmp(3)+ d_tmp(2)*d_tmp(3)
              energy = energy + system % V_self(2) * d
 
-             ! new anisotrypy term
+             ! new anisotropy term
              d = d_tmp(1) + d_tmp(2)
              energy = energy + system % V_self(3) * d
 

@@ -6,22 +6,23 @@ program four_phi_model_3d
   use m_system_3d
   use m_system_3d_mc
   use m_system_3d_md
-  use m_averages
-  use m_averages_func ! remove later
+  ! use m_averages
+  ! use m_averages_func ! remove later
   use m_symmetry
   use m_input, only: t_input
   use m_input, only: read_input
   use m_test
+  use m_pimc
 
   implicit none
 
   type(t_input):: inp
   type(system_3d):: system
-  type(mc_parameters):: mc_params
-  type(md_parameters):: md_params
-  type(mc_output):: mc_outp
-  type(md_output):: md_outp
-  type(averages):: av
+  !type(mc_parameters):: mc_params
+  !type(md_parameters):: md_params
+  !type(mc_output):: mc_outp
+  !type(md_output):: md_outp
+  !type(averages):: av
 
   integer::i,j,ii 
   integer::clock, size_n
@@ -44,8 +45,11 @@ program four_phi_model_3d
   ! iniitalize system
   call system_3d_init_inp(system,inp)
   
+  ! set tetragonal geometry
+  call set_geometry_tetragonal(system)
+
   ! initialize averages
-  call averages_init(av,inp)
+  !call averages_init(av,inp)
 
   if (inp % runmode .eq. "test") then
     write(6,*) "in test runmode"
@@ -53,17 +57,18 @@ program four_phi_model_3d
     
   else if(inp % runmode .eq. "mc") then
     write(6,*) "in mc runmode"
-    call perform_monte_carlo(system, inp, mc_params, mc_outp, av)
+    call perform_monte_carlo(system, inp )! mc_params, mc_outp, av)
     
   else if(inp % runmode .eq. "pimc") then
-    write(6,*) "So, you want to do pimc? implementation is underway..."
-    
+    write(6,*) "in pimc runmode"
+     call perform_pimc(system, inp) !, mc_params, mc_outp, av)
+
   else if(inp % runmode .eq. "md") then
     write(6,*) "in md runmode"
-    call perform_molecular_dynamics(system, inp, md_params, md_outp, av)
+    call perform_molecular_dynamics(system, inp) ! md_params, md_outp, av)
 
   else 
-    write(6,*) 'runmode must be either "test", "mc", or "md"' 
+    write(6,*) 'runmode must be either "test", "mc", "md", or "pimc"' 
   end if
   
 end program four_phi_model_3d

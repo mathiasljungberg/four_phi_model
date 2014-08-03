@@ -43,6 +43,7 @@ contains
     mc_outp % nsweeps = 0
     mc_outp % nmoves = 0.0_wp
     mc_outp % acc = 0.0_wp
+    mc_outp % delta_acc = 0.0_wp
     mc_outp % energy = Energy
     
   end subroutine mc_output_init

@@ -17,6 +17,7 @@ module m_input
      integer:: nqpoints_qav, n_adj_step
      real(kind=wp):: acc_target, step_K
      real(kind=wp):: thermostat_rate
+     integer:: nslices
   end type t_input
   
 contains
@@ -41,6 +42,7 @@ subroutine read_input(ifile, inp)
   read(ifile,*) inp % av_step1, inp % av_step2, inp % n_magic_step
   read(ifile,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K  
   read(ifile,*) inp % temp ! in k_b * T
+  read(ifile,*) inp % nslices ! used for pimc only
   read(ifile,*) inp % av_dyn
   read(ifile,*) inp % mom4_gamma
   read(ifile,*) inp % mom4_gamma_q, inp % div_qpoints_4_mom
@@ -69,6 +71,7 @@ subroutine read_input(ifile, inp)
   write(6,*) inp % av_step1, inp % av_step2, inp % n_magic_step
   write(6,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K  
   write(6,*) inp % temp ! in k_b * T
+  write(6,*) inp % nslices ! used for pimc only
   write(6,*) inp % av_dyn
   write(6,*) inp % mom4_gamma
   write(6,*) inp % mom4_gamma_q, inp % div_qpoints_4_mom

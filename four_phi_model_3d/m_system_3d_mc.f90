@@ -4,22 +4,29 @@ module m_system_3d_mc
   use m_mc_parameters
   use m_averages
   use m_averages_func
+  !use m_averages_new
+  !use m_averages_new
   use m_mc_utils
   implicit none
   
 contains
   
-  subroutine perform_monte_carlo(system, inp, mc_params, mc_outp, av)
+  subroutine perform_monte_carlo(system, inp) !mc_params, mc_outp, av)
     use m_input, only: t_input
 
     type(system_3d), intent(inout):: system
     type(t_input), intent(in):: inp
-    type(mc_parameters), intent(inout):: mc_params
-    type(mc_output), intent(inout):: mc_outp
-    type(averages), intent(inout):: av
+    !type(mc_parameters), intent(inout):: mc_params
+    !type(mc_output), intent(inout):: mc_outp
+    !type(averages), intent(inout):: av
 
+    type(averages):: av
+    !type(t_input):: inp
+    type(mc_parameters):: mc_params
+    type(mc_output):: mc_outp
     real(wp):: Energy
     integer:: i
+
     
     call mc_parameters_init(mc_params, inp)
 
@@ -28,6 +35,8 @@ contains
 
     call mc_output_init(mc_outp, inp, Energy)
     call mc_initialize_files(mc_params, inp % basename)
+
+    call averages_init(av,inp)
      
     if(inp % restart) then
        call system_3d_read_restart(system, 10, inp % restart_file)       

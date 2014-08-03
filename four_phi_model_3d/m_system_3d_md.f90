@@ -8,19 +8,23 @@ module m_system_3d_md
 
 contains
 
-  subroutine perform_molecular_dynamics(system, inp, md_params, md_outp, av)
+  subroutine perform_molecular_dynamics(system, inp) !md_params, md_outp, av)
     use m_input, only: t_input
     
     type(system_3d), intent(inout):: system
     type(t_input), intent(in):: inp
-    type(md_parameters), intent(inout):: md_params
-    type(md_output), intent(inout)::  md_outp
-    type(averages), intent(inout):: av
-
+    !type(md_parameters), intent(inout):: md_params
+    !type(md_output), intent(inout)::  md_outp
+    
+    type(averages):: av
+    !type(t_input):: inp
+    type(md_parameters):: md_params
+    type(md_output):: md_outp
     integer:: i
 
     call md_parameters_init(md_params, inp)
     call md_initialize_files(md_params, inp % basename)
+    call averages_init(av,inp)
     
     if(inp % restart) then
       call system_3d_read_restart(system, 10, inp % restart_file)       
@@ -50,6 +54,8 @@ contains
       end do
     end if
     
+
+        
     call molecular_dynamics(system, md_params, md_outp, av)
 
   end subroutine perform_molecular_dynamics
