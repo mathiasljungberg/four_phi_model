@@ -1,6 +1,6 @@
 ! last changed 2007-10-10
 
-module hist_class
+module m_hist
   use parameters
   implicit none
   type hist
@@ -191,7 +191,4 @@ contains
 
     end function get_sum
 
-
-
-
-end module hist_class
+  end module m_hist

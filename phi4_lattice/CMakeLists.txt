@@ -53,11 +53,11 @@ INCLUDE_DIRECTORIES("/Users/mathias/work/fortran-utilities_build")
 #EXTERNAL_PROJECT_ADD("/Users/mathias/work/fortran-utilities_build/m_FFT.o")
 
 SET(ALL_MODULES 
-m_averages_func.F90             m_md_parameters.F90             m_symmetry.F90                  
+m_md_parameters.F90             m_symmetry.F90                  
 m_bandstructure.F90             m_system_3d.F90                 
-hist_class.F90                  m_linalg.F90                    m_moment_fitting.F90            m_mc.F90              parameters.F90
+m_hist.F90                  m_linalg.F90                    m_moment_fitting.F90            m_mc.F90              parameters.F90
 m_TCF.F90                       m_mc_parameters.F90                    
-m_averages.F90                  m_mc_utils.F90                  m_strings.F90                   m_md.F90
+m_mc_utils.F90                  m_strings.F90                   m_md.F90
 m_input.F90 
 m_pimc.F90 
 m_t_pimc_parameters.F90

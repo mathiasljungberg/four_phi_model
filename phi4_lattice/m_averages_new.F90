@@ -1,6 +1,6 @@
 module m_averages_new
   use parameters
-  use hist_class
+  use m_hist
   implicit none
   
   type averages

@@ -4,7 +4,7 @@ module m_averages_func_new
   use m_system_3d
   use m_mc_parameters
   use m_md_parameters
-  use hist_class
+  use m_hist
   use m_averages_new
   implicit none
   

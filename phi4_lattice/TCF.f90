@@ -1,6 +1,6 @@
 program TCF
   use parameters
-  use hist_class
+  use m_hist
   use FFT_m
   use m_TCF
   use m_system_3d
