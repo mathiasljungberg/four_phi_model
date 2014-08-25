@@ -58,17 +58,25 @@ contains
     av % nav2 = 0.0_wp
 
     allocate(av % displacements_tot(system % ndisp))
-    allocate(av % displacements_tot2(system % ndisp))
+    !allocate(av % displacements_tot2(system % ndisp))
     allocate(av % displacements_var(system % ndisp))
     allocate(av % q_average(3, av % nqpoints_qav), av % q2_average(3,3,av % nqpoints_qav)) 
     allocate(av % mom4(3, 3, av % nqpoints_qav), av % mom4_tmp(3,3,av % nqpoints_qav)) 
 
     av % energy_tot = 0.0_wp
+
+    !av % energy_pot = 0.0_wp
+    !av % energy_pot_var = 0.0_wp
+
+    !av % energy_kin = 0.0_wp
+    !av % energy_kin_var = 0.0_wp
+    
     av % displacements_tot = 0.0_wp
-    av % displacements_tot2 = 0.0_wp
+    !av % displacements_tot2 = 0.0_wp
     av % displacements_var = 0.0_wp
+    
     av % polarization = 0.0_wp
-    av % polarization2 = 0.0_wp
+    !av % polarization2 = 0.0_wp
     av % polarization_var = 0.0_wp
     av % q_average = 0.0_wp
     av % q2_average = 0.0_wp
@@ -82,6 +90,8 @@ contains
     call hist_init(av % hist_P1, 1000, -2.5_wp, 2.5_wp)
     call hist_init(av % hist_P2, 1000, -2.5_wp, 2.5_wp)
     call hist_init(av % hist_P3, 1000, -2.5_wp, 2.5_wp)
+
+    write(6,*) "here4"    
 
     if(av % flag_av_dyn) then
        ! compressed storage of fc matrix
@@ -207,23 +217,12 @@ contains
 
    end subroutine collect_averages
 
-
-  subroutine finalize_averages_mc(av)
+  subroutine finalize_averages(av)
      type(averages), intent(inout)::av
 
-     !av % energy_tot =  av % energy_tot / (av % nav1)
-
-     !av % displacements_tot = av % displacements_tot / (av % nav1)
-     !av % displacements_tot2 = av % displacements_tot2 / (av % nav1)
      av % displacements_var = av % displacements_var / (av % nav1)
-     !av % polarization = av % polarization / (av % nav1)
-     !av % polarization2 = av % polarization2 / (av % nav1)
      av % polarization_var = av % polarization_var / (av % nav1)
-     !av % q_average = av % q_average / (av % nav1)
-     !av % q2_average = av % q2_average / (av % nav1)
 
-     write(6,*) "so far"
-     
      if(av % flag_av_dyn) then
         av % dyn_mat = av % dyn_mat / (av % nav2)
         av % dxdx = av % dxdx / (av % nav2)
@@ -237,8 +236,62 @@ contains
            av % dyn_mat2 = av % dyn_mat2 / (av % nav2)
         end if
      end if
-     
-   end subroutine finalize_averages_mc
+
+      if(av % flag_av_T) then
+        
+        av % av_E_kin_gamma = av % av_E_kin_gamma / (av % nav1)
+        av % av_T = av % av_T / (av % nav1)
+        av % av_T2 = av % av_T2 / (av % nav1)
+      
+      end if
+
+    end subroutine finalize_averages
+
+!  subroutine finalize_averages_mc(av)
+!     type(averages), intent(inout)::av
+!
+!     !av % energy_tot =  av % energy_tot / (av % nav1)
+!
+!     !av % displacements_tot = av % displacements_tot / (av % nav1)
+!     !av % displacements_tot2 = av % displacements_tot2 / (av % nav1)
+!     !av % energy_pot_var = av % energy_pot_var / (av % nav1)
+!     !av % energy_kin_var = av % energy_kin_var / (av % nav1)
+!     av % displacements_var = av % displacements_var / (av % nav1)
+!     !av % polarization = av % polarization / (av % nav1)
+!     !av % polarization2 = av % polarization2 / (av % nav1)
+!     av % polarization_var = av % polarization_var / (av % nav1)
+!     !av % q_average = av % q_average / (av % nav1)
+!     !av % q2_average = av % q2_average / (av % nav1)
+!
+!     write(6,*) "so far"
+!     
+!     if(av % flag_av_dyn) then
+!        av % dyn_mat = av % dyn_mat / (av % nav2)
+!        av % dxdx = av % dxdx / (av % nav2)
+!
+!        if (av % flag_mom4_gamma) then
+!           av % mom4_g = av % mom4_g / (av % nav2)
+!           av % mom4 = av % mom4 / (av % nav2)
+!        end if
+!
+!        if (av % flag_mom4_gamma_q) then
+!           av % dyn_mat2 = av % dyn_mat2 / (av % nav2)
+!        end if
+!     end if
+!     
+!   end subroutine finalize_averages_mc
+
+!  subroutine finalize_averages_md(av)
+!    type(averages), intent(inout)::av
+!    
+!    call finalize_averages_mc(av)
+!    
+!    av % av_E_kin_gamma = av % av_E_kin_gamma / (av % nav1)
+!    av % av_T = av % av_T / (av % nav1)
+!    av % av_T2 = av % av_T2 / (av % nav1)
+!
+!  end subroutine finalize_averages_md
+
   
    subroutine print_averages_mc(system, av, mc_outp, mc_params)
      type(system_3d), intent(in)::system
@@ -252,7 +305,7 @@ contains
      write(6,*) "Number of accepted moves", mc_outp % acc, "in per cent", (100.0_wp * mc_outp % acc) / mc_outp % nmoves, "%"
      write(6,*) "Average potential energy", av % energy_tot
 
-     call print_averages_common(system, av, mc_params % beta)
+     call print_averages_common(system, av, mc_params % beta, "" )
 
    end subroutine print_averages_mc
   
@@ -295,16 +348,6 @@ contains
 !  end subroutine collect_averages_md
 
 
-!  subroutine finalize_averages_md(av)
-!    type(averages), intent(inout)::av
-! 
-!    call finalize_averages_mc(av)
-!
-!    av % av_E_kin_gamma = av % av_E_kin_gamma / (av % nav1)
-!    av % av_T = av % av_T / (av % nav1)
-!    av % av_T2 = av % av_T2 / (av % nav1)
-!
-!  end subroutine finalize_averages_md
 
 
   subroutine print_averages_md(system, av, md_outp, md_params)
@@ -324,7 +367,7 @@ contains
     write(6,*) "Average kinetic energy in gamma", av % av_E_kin_gamma, "average of three gamma modes,", sum(av % av_E_kin_gamma) / 3.0_wp
     write(6,*) "Average temperature in gamma", 2.0_wp * av % av_E_kin_gamma, "average of three gamma modes,", sum(2.0 * av % av_E_kin_gamma) / 3.0_wp
 
-    call print_averages_common(system, av, md_params % beta)
+    call print_averages_common(system, av, md_params % beta, "")
 
 
     call hist_write(av % hist_T, "histogram_T.dat")
@@ -350,13 +393,24 @@ contains
      ! variances must be computed first since they use old average
      call update_var(av % displacements_var,  system % displacements, &
           av % displacements_tot, real(av % nav1, wp) )
+     
+     !call update_var(av % energy_pot_var,  system % energy_pot, &
+     !     av % energy_pot, real(av % nav1, wp) )
+
+     !call update_var(av % energy_kin_var,  system % energy_kin, &
+     !     av % energy_kin, real(av % nav1, wp) )
 
      !av % energy_tot = av % energy_tot + system_3d_get_potential_energy(system)  
-     call update_av( av % energy_tot, system_3d_get_potential_energy(system),  real(av % nav1, wp))
+     !call update_av( av % energy_pot, system % energy_pot,  real(av % nav1, wp))
+     !call update_av( av % energy_kin, system % energy_kin,  real(av % nav1, wp))
      !av % displacements_tot = av % displacements_tot + system % displacements
+     !write(6,*) "here1"
+
      call update_av( av % displacements_tot, system % displacements,  real(av % nav1, wp))
+     !write(6,*) "here2"
      !av % displacements_tot2 = av % displacements_tot2 + system % displacements ** 2
-     call update_av( av % displacements_tot2, system % displacements**2,  real(av % nav1, wp))
+     !call update_av( av % displacements_tot2, system % displacements**2,  real(av % nav1, wp))
+     !write(6,*) "here3"
 
      ! fill histograms    
      do j=1, system % nparticles
@@ -372,7 +426,7 @@ contains
      !av % polarization = av % polarization + dreal(array_q)
       call update_av(av % polarization, dreal(array_q), real(av % nav1, wp) )
      !av % polarization2 = av % polarization2 + dreal(array_q)**2
-      call update_av(av % polarization2, dreal(array_q)**2, real(av % nav1, wp) )
+     ! call update_av(av % polarization2, dreal(array_q)**2, real(av % nav1, wp) )
 
      call hist_add(av % hist_P1, dreal(array_q(1)), 1.0_wp)
      call hist_add(av % hist_P2, dreal(array_q(2)), 1.0_wp)
@@ -482,10 +536,11 @@ contains
    end subroutine compute_4mom3
 
 
-   subroutine print_averages_common(system, av, beta)
+   subroutine print_averages_common(system, av, beta, string)
      type(system_3d), intent(in)::system
      type(averages), intent(inout)::av
      real(kind=wp), intent(in):: beta
+     character(*), intent(in):: string 
 
      type(hist):: hist_dyn_mat
 
@@ -493,60 +548,77 @@ contains
      integer:: i,j,q
      integer:: ndisp
      real(kind=wp), allocatable:: eig(:), freq(:), eigvec(:,:)
+     character(80):: filename 
+     integer:: ifile
 
+     ifile = 41
+
+     write(6,*) "****************************"
+     write(6,*) "Averages for: ", string
+     write(6,*) "****************************"
+     
      call get_q_space(system % supercell, av % displacements_tot , array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )
      
      write(6,*) "Order parameter", dreal(array_q)
 
      ! ji: modified to include beta=1/kT factor  AND to compute susceptibility correctly :-)
 
-     write(6,*) "Susceptibility. <P^2> - <P>^2 ", (av % polarization2 - av % polarization ** 2 ) * beta * system % nparticles 
+     !write(6,*) "Susceptibility. <P^2> - <P>^2 ", (av % polarization2 - av % polarization ** 2 ) * beta * system % nparticles 
      write(6,*) "Susceptibility. <P^2> - <P>^2, from variance ", av % polarization_var * beta * system % nparticles !/ real(av % nav1, wp)
 
      ! write <q_i q_j> and <q_i>
-     open(41, file="mode_susceptibilities.dat", status="unknown") 
-     write(41,*) av % nqpoints_qav
-     write(41,*) beta,  system % nparticles
-     write(41,*)
+     filename = trim( trim(adjustl(string)) // "_mode_susceptibilities.dat")
+     open(ifile, file=filename, status="unknown") 
+     write(ifile,*) av % nqpoints_qav
+     write(ifile,*) beta,  system % nparticles
+     write(ifile,*)
      do q=1, av % nqpoints_qav
-        write(41,*) av % qpoints_qav(:,q)
-        !write(41,*)  (( mc_params % beta * system % nparticles * &
+        write(ifile,*) av % qpoints_qav(:,q)
+        !write(ifile,*)  (( mc_params % beta * system % nparticles * &
         !     (av % q2_average(i,j,q) - av % q_average(i,q) * av % q_average(j,q)), i=1,3),j=1,3)
-        write(41,'(6ES18.10)')  (av % q_average(i,q),  i=1,3)
+        write(ifile,'(6ES18.10)')  (av % q_average(i,q),  i=1,3)
         do j=1,3
-          write(41,'(6ES18.10)')  (av % q2_average(i,j,q), i=1,3)
+          write(ifile,'(6ES18.10)')  (av % q2_average(i,j,q), i=1,3)
         end do
-        write(41,*)
+        write(ifile,*)
      end do
-     close(41)    
+     close(ifile)    
 
      ! write histograms
-     call hist_write(av % hist_x1, "histogram_x1.dat")
-     call hist_write(av % hist_x2, "histogram_x2.dat")
-     call hist_write(av % hist_x3, "histogram_x3.dat")
+     filename = trim( trim(adjustl(string)) // "_histogram_x1.dat")
+     call hist_write(av % hist_x1, filename)
+     filename = trim( trim(adjustl(string)) // "_histogram_x2.dat")
+     call hist_write(av % hist_x2, filename)
+     filename = trim( trim(adjustl(string)) // "_histogram_x3.dat")
+     call hist_write(av % hist_x3, filename)
 
-     call hist_write(av % hist_P1, "histogram_P1.dat")
-     call hist_write(av % hist_P2, "histogram_P2.dat")
-     call hist_write(av % hist_P3, "histogram_P3.dat")
+     filename = trim( trim(adjustl(string)) // "_histogram_P1.dat")
+     call hist_write(av % hist_P1, filename)
+     filename = trim( trim(adjustl(string)) // "_histogram_P2.dat")
+     call hist_write(av % hist_P2, filename)
+     filename = trim(trim(adjustl(string)) // "_histogram_P3.dat")
+     call hist_write(av % hist_P3, filename)
 
      
      ! diagonalize and write the average dynamical matrix (fc matrix now)
      if(av % flag_av_dyn ) then
 
-        write(6,*) "writing dynamical matrix"
-        open(41, file="average_dyn_mat.dat", status="unknown")
-        write(41,*) system % supercell
-        write(41,*) av % dyn_mat
-        close(41)
+        !write(6,*) "writing dynamical matrix"
+        filename = trim( trim(adjustl(string)) // "_average_dyn_mat.dat")
+        open(ifile, file=filename, status="unknown")
+        write(ifile,*) system % supercell
+        write(ifile,*) av % dyn_mat
+        close(ifile)
 
-        write(6,*) "Done"
+        !write(6,*) "Done"
 
-        write(6,*) "writing dxdx matrix"
-        open(41, file="average_dVdx_dVdx.dat", status="unknown")
-        write(41,*) system % supercell
-        write(41,*) av % dxdx *  beta
-        write(6,*) "Done"
-        close(41)
+        !write(6,*) "writing dxdx matrix"
+        filename = trim( trim(adjustl(string)) // "_average_dVdx_dVdx.dat")
+        open(ifile, file=filename, status="unknown")
+        write(ifile,*) system % supercell
+        write(ifile,*) av % dxdx *  beta
+        !write(6,*) "Done"
+        close(ifile)
 
         if (.false.) then
 
@@ -557,21 +629,23 @@ contains
            
            write(6,*) "diagonalized average dynamical matrix"
            
-           open(41, file="average_dyn_mat_diag.dat", status="unknown")
+           filename = trim( trim(adjustl(string)) // "_average_dyn_mat_diag.dat")
+           open(ifile, file=filename, status="unknown")
            
            freq = sqrt(eig) !* hbar * cm
            do i=1, ndisp
-              write(41,*) freq(i)
+              write(ifile,*) freq(i)
            end do
            
-           close(41)
+           close(ifile)
            
            ! put frequencies in histogram
            call hist_init(hist_dyn_mat, 1000, 0.0_wp, 10.0_wp)
            do i=1, ndisp
               call hist_add(hist_dyn_mat, freq(i), 1.0_wp)
            end do
-           call hist_write(hist_dyn_mat, "histogram_dyn_mat.dat")
+           filename = trim( trim(adjustl(string)) // "_histogram_dyn_mat.dat")
+           call hist_write(hist_dyn_mat, filename)
            
            deallocate(eig, eigvec)
         end if ! if (.false.) then
@@ -579,28 +653,31 @@ contains
         if (av % flag_mom4_gamma) then
            !write(44,*) av % mom4_g
 
-           open(41, file="mom_4.dat", status="unknown") 
-           write(41,*) av % nqpoints_qav
-           write(41,*)
+          filename = trim( trim(adjustl(string)) // "_mom_4.dat")
+           open(ifile, file=filename, status="unknown") 
+           write(ifile,*) av % nqpoints_qav
+           write(ifile,*)
            do q=1, av % nqpoints_qav
              do j=1,3
-               write(41,'(6ES18.10)')  (av % mom4(i,j,q), i=1,3)
+               write(ifile,'(6ES18.10)')  (av % mom4(i,j,q), i=1,3)
              end do
-             write(41,*)
+             write(ifile,*)
            end do
-           close(41)    
+           close(ifile)    
            
-        end if
+         end if
 
 
         if (av % flag_mom4_gamma_q) then
 
-           open(41, file="mom_4_gamma_q.dat", status="unknown") 
-           write(41,*) av % nqpoints_4_mom
+          filename = trim( trim(adjustl(string)) // "_mom_4_gamma_q.dat")
+          
+           open(ifile, file=filename, status="unknown") 
+           write(ifile,*) av % nqpoints_4_mom
            do i=1, av % nqpoints_4_mom
-              write(41,*)  av % qpoints_4_mom(i,:), av % dyn_mat2(i,:,:,:) 
+              write(ifile,*)  av % qpoints_4_mom(i,:), av % dyn_mat2(i,:,:,:) 
            end do
-           close(41)
+           close(ifile)
 
           ! write(43,*) sum(sum(av % dyn_mat2(:,:,:,:),3),1)
 

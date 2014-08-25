@@ -1,7 +1,7 @@
 module m_test
   use m_system_3d
-  use m_system_3d_mc
-  use m_system_3d_md
+  use m_mc
+  use m_md
   use m_symmetry
   use m_input, only: t_input
   use m_linalg

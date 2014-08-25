@@ -4,7 +4,7 @@ module m_t_pimc_parameters
   implicit none
 
   type t_pimc_parameters
-     character(80):: restartfile
+     character(80):: restartfile, basename
      integer:: nsweeps, unit_restart, n_magic_step, n_adj_step
      real(kind=wp):: beta, step, acc, delta_acc, acc_target, step_K
      logical:: first_comp
@@ -43,6 +43,8 @@ contains
     ppar % hbar2 = 1
     ppar % tau =  ppar % beta / ppar % nslices
     
+    ppar % basename = inp % basename 
+
   end subroutine pimc_parameters_init
   
 

@@ -7,6 +7,7 @@ module m_system_3d
      integer, dimension(3):: supercell
      real(kind=wp), dimension(3):: ucell
      real(kind=wp), allocatable, dimension(:):: displacements, masses, masses_p, velocities, accelerations
+     !real(kind=wp):: energy_pot, energy_kin
      real(kind=wp):: V_self(4), V_inter(2)
 
      ! lookup tables for ft:s

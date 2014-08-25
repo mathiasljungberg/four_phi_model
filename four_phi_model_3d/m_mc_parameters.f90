@@ -12,6 +12,8 @@ module m_mc_parameters
   type mc_output
      integer:: nsweeps
      real(kind=wp):: nmoves, acc, energy, delta_acc
+     real(kind=wp):: energy_pot, energy_kin
+
   end type mc_output
   
 contains
@@ -33,18 +35,22 @@ contains
   end subroutine mc_parameters_init
 
 
-  subroutine mc_output_init(mc_outp, inp, Energy)
+  subroutine mc_output_init(mc_outp, inp, energy_pot, energy_kin)
     use m_input, only: t_input
     
     type(mc_output), intent(inout):: mc_outp
     type(t_input), intent(in):: inp
-    real(wp), intent(in):: Energy
+    real(wp), intent(in):: energy_kin
+    real(wp), intent(in):: energy_pot
 
     mc_outp % nsweeps = 0
     mc_outp % nmoves = 0.0_wp
     mc_outp % acc = 0.0_wp
     mc_outp % delta_acc = 0.0_wp
-    mc_outp % energy = Energy
+    mc_outp % energy_pot = energy_pot
+    mc_outp % energy_kin = energy_kin
+    mc_outp % energy = energy_pot + energy_kin
+
     
   end subroutine mc_output_init
 

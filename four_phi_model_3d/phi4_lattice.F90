@@ -1,11 +1,11 @@
-program four_phi_model_3d
+program phi4_lattice ! four_phi_model_3d
   use parameters
   use m_mc_parameters
   use m_md_parameters
   use m_linalg
   use m_system_3d
-  use m_system_3d_mc
-  use m_system_3d_md
+  use m_mc
+  use m_md
   ! use m_averages
   ! use m_averages_func ! remove later
   use m_symmetry
@@ -48,9 +48,6 @@ program four_phi_model_3d
   ! set tetragonal geometry
   call set_geometry_tetragonal(system)
 
-  ! initialize averages
-  !call averages_init(av,inp)
-
   if (inp % runmode .eq. "test") then
     write(6,*) "in test runmode"
     call test(inp, system)
@@ -71,6 +68,6 @@ program four_phi_model_3d
     write(6,*) 'runmode must be either "test", "mc", "md", or "pimc"' 
   end if
   
-end program four_phi_model_3d
+end program phi4_lattice !four_phi_model_3d
 
   

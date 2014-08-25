@@ -18,17 +18,18 @@ contains
     type(system_3d), intent(inout):: system
     type(t_input), intent(in):: inp
 
-
     type(averages):: av
     type(mc_parameters):: mc_params
     type(mc_output):: mc_outp
     type(system_3d), allocatable:: psys(:)
     type(averages), allocatable:: pav(:)
+    type(averages):: av_tot
     type(t_pimc_parameters):: ppar
     real(wp):: Energy
-    real(wp):: kin_energy, pot_energy
+    real(wp):: energy_kin, energy_pot
     integer:: i
     integer:: nslices
+    character(80):: string
 
     !nslices = inp % nslices
     nslices = inp % nslices
@@ -39,37 +40,47 @@ contains
     call pimc_parameters_init(ppar, inp)
 
     call averages_init_from_inp(av,inp)
+
     call initialize_averages(system, av)
-    
+
     ! clone the system and put it in a vector
     do i= 1, nslices
       psys(i) = system
       pav(i) = av
     end do
-    
+
+    av_tot = av
+
+    write(6,*) "here4"
+
+    if(inp % restart) then
+      do i= 1, nslices
+        write(string,*) i
+        string = trim( trim(adjustl(inp % restart_file)) //  ".slice" // trim(adjustl(string)) // ".restart") 
+        !call pimc_read_restart(psysm, 10, string)       
+        call system_3d_read_restart(psys(i), 10, string)       
+        write(6,*) "read restart file: ", string
+      end do
+    end if
+
     ! shake it around a bit
     !call pimc_randomize_coords(psys, ppar, mc_params)
 
     !Energy = system_3d_get_potential_energy(system)
-    call pimc_get_potential_energy(psys, ppar, pot_energy)
-    call pimc_get_kinetic_energy(psys, ppar, kin_energy)
-    Energy = pot_energy + kin_energy
+    call pimc_get_potential_energy(psys, ppar, energy_pot)
+    call pimc_get_kinetic_energy(psys, ppar, energy_kin)
+    Energy = energy_pot + energy_kin
 
     write(6,*) "Energy", Energy
-    write(6,*) "pot_energy", pot_energy
-    write(6,*) "kin_energy", kin_energy
+    write(6,*) "energy_pot", energy_pot
+    write(6,*) "energy_kin", energy_kin
 
     !stop
 
-    call mc_output_init(mc_outp, inp, Energy)
+    call mc_output_init(mc_outp, inp, energy_pot, energy_kin)
     !call mc_initialize_files(mc_params, inp % basename)
 
-     
-    !if(inp % restart) then
-    !   call pimc_read_restart(pimc_system, 10, inp % restart_file)       
-    !   write(6,*) "read restart file", inp % restart_file
-    !end if
-
+    
     !if(inp % first_comp) then
     !  do i=1,system % ndisp
     !    if (mod(i,3).ne.0) then
@@ -80,45 +91,30 @@ contains
 
     !call monte_carlo(system, mc_params, mc_outp, av)
 
-    call pimc(psys, ppar, mc_outp, pav)
+    call pimc(psys, ppar, mc_outp, pav, av_tot)
 
   end subroutine perform_pimc
 
 
-  subroutine pimc(psys, ppar, mc_outp, pav)
+  subroutine pimc(psys, ppar, mc_outp, pav, av_tot)
     type(system_3d), intent(inout):: psys(:)
     type(t_pimc_parameters), intent(inout):: ppar
     type(mc_output), intent(inout):: mc_outp
     type(averages), intent(inout):: pav(:)
+    type(averages), intent(inout):: av_tot
 
-    integer:: i
+    integer:: i,j
     integer:: nslices
     real(wp)::Energy, pot_energy, kin_energy
-
-    !write(6,*) mc_params % step
-    
-    !step is to be understood at temp=1.0, scale accordingly
-    !mc_params % step  = step * sqrt(temp)
-    !mc_params % beta = 1.0_wp / (temp) ! 1.0_wp / (k_b * temp)
-    
-    !mc_outp % nsweeps = 0
-    !mc_outp % nmoves = 0
-    !mc_outp % acc = 0.0_wp
-    !mc_outp % energy = Energy
-
-    !do i=1, mc_params % nsweeps_eq
-    !   call one_sweep(system, mc_params, mc_outp)
-    !end do
-    !
-    !write(6,*) "mc_outp % nsweeps after equilibration", mc_outp % nsweeps
-    !mc_outp % nsweeps = 0
-    !mc_outp % nmoves = 0
-    !mc_outp % acc = 0.0_wp
-
-    !write(6,*) "av step after", av % av_step1,av % av_step1
+    character(80):: string
 
     
-    !call system_3d_write_restart(system, mc_params % unit_restart, mc_params % restartfile)
+    do j=1, ppar % nslices
+      write(string,*) j
+      string = trim( trim(adjustl(ppar % basename)) //  ".slice" // trim(adjustl(string)) // ".restart") 
+      call system_3d_write_restart(psys(j), ppar % unit_restart, string)
+    end do
+
     nslices = ppar % nslices
 
     !do i=1, nslices
@@ -132,7 +128,11 @@ contains
       !call pimc_magic_step(psys, ppar, mc_outp)
       
       !call pimc_collect_averages(psystem, av, mc_outp)
-      call collect_averages(psys(1), pav(1), i)
+
+      do j=1, ppar % nslices
+        call collect_averages(psys(j), pav(j), i)
+      end do
+
       call pimc_adjust_stepsize(psys(1), ppar, mc_outp)
       
     end do
@@ -160,12 +160,23 @@ contains
 
     !call system_3d_write_restart(system, mc_params % unit_restart, mc_params % restartfile)
 
-    call finalize_averages_mc(pav(1))
+    do j=1, ppar % nslices
+      !call finalize_averages_mc(pav(j))
+      call finalize_averages(pav(j))
+      write(string,*) j
+      string = trim("slice_"// trim(adjustl(string)))
+      call print_averages_common(psys(j), pav(j), ppar % beta, string)
+    end do
 
-    !write(6,*) "so far"
-    !call print_averages_mc(system, av, mc_outp, mc_params)
- 
-    call print_averages_common(psys(1), pav(1), ppar % beta)
+    call pimc_sum_av_slices(pav, av_tot)
+    call print_averages_common(psys(1), av_tot, ppar % beta, "tot")
+
+    do j=1, ppar % nslices
+      write(string,*) j
+      string = trim( trim(adjustl(ppar % basename)) //  ".slice" // trim(adjustl(string)) // ".restart") 
+      call system_3d_write_restart(psys(j), ppar % unit_restart, string)
+    end do
+    
 
   end subroutine pimc
 
@@ -504,5 +515,51 @@ subroutine get_cyclic_permutation(perm)
   
 end subroutine get_cyclic_permutation
 
+subroutine pimc_sum_av_slices(pav, av)
+  type(averages), intent(in):: pav(:)
+  type(averages), intent(inout):: av  
+
+  integer:: i,n
+
+  n = size(pav)
+
+  do i=1, n
+    
+    av % displacements_tot = av % displacements_tot + pav(i) % displacements_tot / n
+    av % polarization_var = av % polarization_var + pav(i) % polarization_var / n
+   
+    !do q=1, av % nqpoints_qav
+    av % qpoints_qav = av % qpoints_qav + pav(i) % qpoints_qav /n
+    !end do
+
+    if(av % flag_av_dyn ) then
+       
+      av % dyn_mat = av % dyn_mat + pav(i) % dyn_mat /n
+      av % dxdx  = av % dxdx + pav(i) % dxdx / n
+      
+      if (av % flag_mom4_gamma) then
+        !do q=1, av % nqpoints_qav
+          av % mom4 = av % mom4 + pav(i) % mom4 / n
+        !end do
+      end if
+      
+      if (av % flag_mom4_gamma_q) then
+        av % dyn_mat2 = av % dyn_mat2 + pav(i) % dyn_mat2 / n
+      end if
+    end if
+
+    ! histograms
+    av % hist_x1 % y = av % hist_x1 % y + pav(i) % hist_x1 % y 
+    av % hist_x2 % y = av % hist_x2 % y + pav(i) % hist_x2 % y 
+    av % hist_x3 % y = av % hist_x3 % y + pav(i) % hist_x3 % y 
+
+    av % hist_P1 % y = av % hist_P1 % y + pav(i) % hist_P1 % y 
+    av % hist_P2 % y = av % hist_P2 % y + pav(i) % hist_P2 % y 
+    av % hist_P3 % y = av % hist_P3 % y + pav(i) % hist_P3 % y 
+
+  end do
+
+  
+end subroutine pimc_sum_av_slices
 
 end module m_pimc

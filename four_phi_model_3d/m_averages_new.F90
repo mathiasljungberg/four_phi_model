@@ -9,6 +9,10 @@ module m_averages_new
      
      ! averages
      real(kind=wp)::  energy_tot
+     !real(kind=wp)::  energy_pot
+     !real(kind=wp)::  energy_kin
+     !real(kind=wp)::  energy_pot_var
+     !real(kind=wp)::  energy_kin_var
      real(kind=wp),allocatable, dimension(:)::  displacements_tot, displacements_tot2
      real(kind=wp),allocatable, dimension(:)::  displacements_var
      complex(kind=wp),allocatable:: q_average(:,:), q2_average(:,:,:) 
@@ -18,7 +22,6 @@ module m_averages_new
      real(kind=wp), allocatable, dimension(:,:):: qpoints_qav
      real(kind=wp):: av_E_kin_gamma(3)
      real(kind=wp):: av_T, av_T2
-
 
      ! real time collected stuff (md)
      real(kind=wp),allocatable, dimension(:):: time
