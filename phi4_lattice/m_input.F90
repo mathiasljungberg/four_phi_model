@@ -17,6 +17,8 @@ module m_input
      integer:: nqpoints_qav, n_adj_step
      real(kind=wp):: acc_target, step_K
      real(kind=wp):: thermostat_rate
+     real(kind=wp):: hist_x_min, hist_x_max
+     integer::  hist_x_npoints
      integer:: nslices
   end type t_input
   
@@ -40,6 +42,7 @@ subroutine read_input(ifile, inp)
   read(ifile,*) inp % nsteps 
   read(ifile,*) inp % n_dump, inp % n_dump_traj
   read(ifile,*) inp % av_step1, inp % av_step2, inp % n_magic_step
+  read(ifile,*) inp % hist_x_min, inp % hist_x_max, inp % hist_x_npoints
   read(ifile,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K  
   read(ifile,*) inp % temp ! in k_b * T
   read(ifile,*) inp % nslices ! used for pimc only
@@ -69,6 +72,7 @@ subroutine read_input(ifile, inp)
   write(6,*) inp % nsteps 
   write(6,*) inp % n_dump, inp % n_dump_traj
   write(6,*) inp % av_step1, inp % av_step2, inp % n_magic_step
+  write(6,*) inp % hist_x_min, inp % hist_x_max, inp % hist_x_npoints
   write(6,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K  
   write(6,*) inp % temp ! in k_b * T
   write(6,*) inp % nslices ! used for pimc only

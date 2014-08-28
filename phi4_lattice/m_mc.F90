@@ -96,6 +96,7 @@ contains
        call magic_step(system, mc_params, mc_outp)
        !call collect_averages_mc(system, av, mc_outp)
        call collect_averages(system, av, mc_outp % nsweeps)
+       call collect_averages_pot_energy(system, av, mc_outp % nsweeps, mc_outp % energy)
        call adjust_stepsize(system, mc_params, mc_outp)
     end do
     
@@ -260,7 +261,7 @@ contains
        call step_controller(delta_acc, mc_params % acc_target, &
             mc_params % step , step_new, 0.0_wp, 1.0e10_wp, mc_params % step_K)
        
-       write(50,*) mc_outp % nsweeps, delta_acc, mc_params % step , step_new
+       !write(50,*) mc_outp % nsweeps, delta_acc, mc_params % step , step_new
        
        mc_outp % delta_acc = 0.0_wp
        

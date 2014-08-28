@@ -9,6 +9,7 @@ module m_averages_new
      
      ! averages
      real(kind=wp)::  energy_tot
+     real(kind=wp)::  energy_var
      !real(kind=wp)::  energy_pot
      !real(kind=wp)::  energy_kin
      !real(kind=wp)::  energy_pot_var

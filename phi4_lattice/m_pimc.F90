@@ -262,77 +262,101 @@ subroutine pimc_simple_sweep(psys, ppar, mc_outp)
     call random_number(threshold)
     delta = (2.0_wp * delta -1.0_wp)* ppar % step
 
-    call pimc_get_delta_potential_action(psys, ppar, perm(2), i, delta, delta_pot_action)
-    call pimc_get_delta_kinetic_action(psys, ppar, perm(1), perm(2), perm(3), &
-         i, delta, delta_kin_action)
+    if(size(psys) .eq. 1) then
+      call pimc_get_delta_potential_action(psys, ppar, perm(1), i, delta, delta_pot_action)
+      delta_kin_action =0.0d0
 
-    !kin_action_old = 0.0_wp
-    !call pimc_get_kinetic_action(psys, ppar, perm(1),perm(2), kin_action)
-    !kin_action_old = kin_action_old + kin_action
-    !call pimc_get_kinetic_action(psys, ppar, perm(2),perm(3), kin_action)
-    !kin_action_old = kin_action_old + kin_action
-    !
-    !pot_action_old = 0.0_wp
-    !call pimc_get_potential_action(psys, ppar, perm(1),perm(2), pot_action)
-    !pot_action_old = pot_action_old + pot_action
-    !call pimc_get_potential_action(psys, ppar, perm(2),perm(3), pot_action)
-    !pot_action_old = pot_action_old + pot_action
-    !
-    !!call pimc_get_potential_action_tot(psys, ppar,  pot_action_tot_old)
-    !!call pimc_get_kinetic_action_tot(psys, ppar,  kin_action_tot_old)
-    !
-    !! move bead perm(2)
-    !psys(perm(2)) % displacements(i) = psys(perm(2)) % displacements(i) + delta
-    !
-    !kin_action_new = 0.0_wp
-    !call pimc_get_kinetic_action(psys, ppar, perm(1),perm(2), kin_action)
-    !kin_action_new = kin_action_new + kin_action
-    !call pimc_get_kinetic_action(psys, ppar, perm(2),perm(3), kin_action)
-    !kin_action_new = kin_action_new + kin_action
-    !
-    !pot_action_new = 0.0_wp
-    !call pimc_get_potential_action(psys, ppar, perm(1),perm(2), pot_action)
-    !pot_action_new = pot_action_new + pot_action
-    !call pimc_get_potential_action(psys, ppar, perm(2),perm(3), pot_action)
-    !pot_action_new = pot_action_new + pot_action
-    
-    !call pimc_get_potential_action_tot(psys, ppar,  pot_action_tot_new)
-    !call pimc_get_kinetic_action_tot(psys, ppar,  kin_action_tot_new)
+      if (exp( -(delta_kin_action + delta_pot_action)) .gt. threshold) then
+        psys(perm(1)) % displacements(i) = psys(perm(1)) % displacements(i) + delta
+        mc_outp % acc = mc_outp % acc + 1.0_wp
+        mc_outp % delta_acc  = mc_outp % delta_acc + 1.0_wp
+        mc_outp % energy = mc_outp % energy + (delta_pot_action - delta_kin_action) / ppar % beta
+      end if
 
+    else 
+      
+      if(size(psys) .eq. 2) then
+        call pimc_get_delta_potential_action(psys, ppar, perm(2), i, delta, delta_pot_action)
+        call pimc_get_delta_kinetic_action(psys, ppar, perm(1), perm(2), perm(1), &
+             i, delta, delta_kin_action)
+        
+      else
+        
+        call pimc_get_delta_potential_action(psys, ppar, perm(2), i, delta, delta_pot_action)
+        call pimc_get_delta_kinetic_action(psys, ppar, perm(1), perm(2), perm(3), &
+             i, delta, delta_kin_action)
+        
+      end if
 
-    !delta_kin_action = kin_action_new - kin_action_old
-    !delta_kin_action = 0
-    !delta_pot_action = pot_action_new - pot_action_old
-
-    !write(6,*) "delta_pot_action -delta_pot_action2", delta_pot_action -delta_pot_action2
-    !write(6,*) "delta_kin_action -delta_kin_action2", delta_kin_action -delta_kin_action2
-
-    !write(6,*) "delta_pot_action, pot_action_tot_new -pot_action_tot_old", &
-    !     delta_pot_action, pot_action_tot_new -pot_action_tot_old, &
-    !     delta_pot_action -(pot_action_tot_new -pot_action_tot_old)
-    !
-    !write(6,*) "delta_kin_action, kin_action_tot_new -kin_action_tot_old", &
-    !     delta_kin_action, kin_action_tot_new -kin_action_tot_old, &
-    !     delta_kin_action -(kin_action_tot_new -kin_action_tot_old)
-    
-    !de = system_3d_get_delta_potential_energy(system, i, delta)
-    
-    !if (exp( -mc_params % beta * de) .gt. threshold) then
-    !system % displacements(i) = system % displacements(i) + delta
-    
-    if (exp( -(delta_kin_action + delta_pot_action)) .gt. threshold) then
-      psys(perm(2)) % displacements(i) = psys(perm(2)) % displacements(i) + delta
-      mc_outp % acc = mc_outp % acc + 1.0_wp
-      mc_outp % delta_acc  = mc_outp % delta_acc + 1.0_wp
-      mc_outp % energy = mc_outp % energy + (delta_pot_action - delta_kin_action) / ppar % beta
-      !mc_outp % energy = mc_outp % energy + (pot_action_tot_new -pot_action_tot_old  - &
-      !     (kin_action_tot_new -kin_action_tot_old )) / ppar % beta
-      !write(6,*) "move accepted", delta_kin_action, delta_pot_action
-    else
-      !psys(perm(2)) % displacements(i) = psys(perm(2)) % displacements(i) - delta      
-      !write(6,*) "move rejected", delta_kin_action,  delta_pot_action
+      !kin_action_old = 0.0_wp
+      !call pimc_get_kinetic_action(psys, ppar, perm(1),perm(2), kin_action)
+      !kin_action_old = kin_action_old + kin_action
+      !call pimc_get_kinetic_action(psys, ppar, perm(2),perm(3), kin_action)
+      !kin_action_old = kin_action_old + kin_action
+      !
+      !pot_action_old = 0.0_wp
+      !call pimc_get_potential_action(psys, ppar, perm(1),perm(2), pot_action)
+      !pot_action_old = pot_action_old + pot_action
+      !call pimc_get_potential_action(psys, ppar, perm(2),perm(3), pot_action)
+      !pot_action_old = pot_action_old + pot_action
+      !
+      !!call pimc_get_potential_action_tot(psys, ppar,  pot_action_tot_old)
+      !!call pimc_get_kinetic_action_tot(psys, ppar,  kin_action_tot_old)
+      !
+      !! move bead perm(2)
+      !psys(perm(2)) % displacements(i) = psys(perm(2)) % displacements(i) + delta
+      !
+      !kin_action_new = 0.0_wp
+      !call pimc_get_kinetic_action(psys, ppar, perm(1),perm(2), kin_action)
+      !kin_action_new = kin_action_new + kin_action
+      !call pimc_get_kinetic_action(psys, ppar, perm(2),perm(3), kin_action)
+      !kin_action_new = kin_action_new + kin_action
+      !
+      !pot_action_new = 0.0_wp
+      !call pimc_get_potential_action(psys, ppar, perm(1),perm(2), pot_action)
+      !pot_action_new = pot_action_new + pot_action
+      !call pimc_get_potential_action(psys, ppar, perm(2),perm(3), pot_action)
+      !pot_action_new = pot_action_new + pot_action
+      
+      !call pimc_get_potential_action_tot(psys, ppar,  pot_action_tot_new)
+      !call pimc_get_kinetic_action_tot(psys, ppar,  kin_action_tot_new)
+      
+      
+      !delta_kin_action = kin_action_new - kin_action_old
+      !delta_kin_action = 0
+      !delta_pot_action = pot_action_new - pot_action_old
+      
+      !write(6,*) "delta_pot_action -delta_pot_action2", delta_pot_action -delta_pot_action2
+      !write(6,*) "delta_kin_action -delta_kin_action2", delta_kin_action -delta_kin_action2
+      
+      !write(6,*) "delta_pot_action, pot_action_tot_new -pot_action_tot_old", &
+      !     delta_pot_action, pot_action_tot_new -pot_action_tot_old, &
+      !     delta_pot_action -(pot_action_tot_new -pot_action_tot_old)
+      !
+      !write(6,*) "delta_kin_action, kin_action_tot_new -kin_action_tot_old", &
+      !     delta_kin_action, kin_action_tot_new -kin_action_tot_old, &
+      !     delta_kin_action -(kin_action_tot_new -kin_action_tot_old)
+      
+      !de = system_3d_get_delta_potential_energy(system, i, delta)
+      
+      !if (exp( -mc_params % beta * de) .gt. threshold) then
+      !system % displacements(i) = system % displacements(i) + delta
+      
+      if (exp( -(delta_kin_action + delta_pot_action)) .gt. threshold) then
+        psys(perm(2)) % displacements(i) = psys(perm(2)) % displacements(i) + delta
+        mc_outp % acc = mc_outp % acc + 1.0_wp
+        mc_outp % delta_acc  = mc_outp % delta_acc + 1.0_wp
+        mc_outp % energy = mc_outp % energy + (delta_pot_action - delta_kin_action) / ppar % beta
+        !mc_outp % energy = mc_outp % energy + (pot_action_tot_new -pot_action_tot_old  - &
+        !     (kin_action_tot_new -kin_action_tot_old )) / ppar % beta
+        !write(6,*) "move accepted", delta_kin_action, delta_pot_action
+        !else
+        !psys(perm(2)) % displacements(i) = psys(perm(2)) % displacements(i) - delta      
+        !write(6,*) "move rejected", delta_kin_action,  delta_pot_action
+      end if
+      
     end if
-  
+    
   end do
   
   mc_outp % nsweeps = mc_outp % nsweeps + 1 
@@ -445,7 +469,7 @@ subroutine pimc_adjust_stepsize(system,  ppar, mc_outp)
      call step_controller(delta_acc, ppar % acc_target, &
           ppar % step , step_new, 0.0_wp, 1.0e10_wp, ppar % step_K)
      
-     write(50,*) mc_outp % nsweeps, delta_acc, ppar % step , step_new
+     !write(50,*) mc_outp % nsweeps, delta_acc, ppar % step , step_new
      
      mc_outp % delta_acc = 0.0_wp
      

@@ -26,6 +26,8 @@ contains
     type(averages), intent(inout):: av
     type(t_input), intent(in):: inp
     
+    real(wp):: r
+
     ! logical flags: which averages to compute
     av % flag_av_dyn = inp % av_dyn
     av % flag_mom4_gamma = inp % mom4_gamma
@@ -41,6 +43,15 @@ contains
     av %  nqpoints_qav = inp % nqpoints_qav 
     allocate(av % qpoints_qav(3,av % nqpoints_qav))
     av % qpoints_qav = inp % qpoints_qav
+
+    ! initialize histograms
+    call hist_init(av % hist_x1, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
+    call hist_init(av % hist_x2, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
+    call hist_init(av % hist_x3, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
+
+    call hist_init(av % hist_P1, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
+    call hist_init(av % hist_P2, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
+    call hist_init(av % hist_P3, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
 
   end subroutine averages_init_from_inp
 
@@ -64,6 +75,7 @@ contains
     allocate(av % mom4(3, 3, av % nqpoints_qav), av % mom4_tmp(3,3,av % nqpoints_qav)) 
 
     av % energy_tot = 0.0_wp
+    av % energy_var = 0.0_wp
 
     !av % energy_pot = 0.0_wp
     !av % energy_pot_var = 0.0_wp
@@ -81,15 +93,6 @@ contains
     av % q_average = 0.0_wp
     av % q2_average = 0.0_wp
     av % av_E_kin_gamma = 0.0_wp
-
-    ! initialize histograms
-    call hist_init(av % hist_x1, 1000, -2.5_wp, 2.5_wp)
-    call hist_init(av % hist_x2, 1000, -2.5_wp, 2.5_wp)
-    call hist_init(av % hist_x3, 1000, -2.5_wp, 2.5_wp)
-
-    call hist_init(av % hist_P1, 1000, -2.5_wp, 2.5_wp)
-    call hist_init(av % hist_P2, 1000, -2.5_wp, 2.5_wp)
-    call hist_init(av % hist_P3, 1000, -2.5_wp, 2.5_wp)
 
     write(6,*) "here4"    
 
@@ -191,6 +194,8 @@ contains
     type(system_3d), intent(in)::system
     type(averages), intent(inout)::av
     integer, intent(in):: step
+    !real(wp), intent(in):: energy
+
     !type(mc_output), intent(in)::mc_outp
     
     integer:: i,i1,i2,i3,j, q
@@ -216,6 +221,24 @@ contains
 
 
    end subroutine collect_averages
+   
+   ! temporary routine until we have a nice type for the averages
+   ! assume that av % nav has already been updated by update1
+  subroutine collect_averages_pot_energy(system, av, step, energy_pot)   
+    type(system_3d), intent(in)::system
+    type(averages), intent(inout)::av
+    integer, intent(in):: step
+    real(wp), intent(in):: energy_pot
+
+    if( mod(step, av % av_step1 ) .eq. 0 ) then
+
+      call update_var(av % energy_var,  energy_pot, &
+           av % energy_tot, real(av % nav1, wp) )
+      call update_av( av % energy_tot, energy_pot,  real(av % nav1, wp))
+
+    end if
+
+  end subroutine collect_averages_pot_energy
 
   subroutine finalize_averages(av)
      type(averages), intent(inout)::av
@@ -384,7 +407,7 @@ contains
    subroutine update_averages1(system, av)
      type(system_3d), intent(in)::system
      type(averages), intent(inout)::av
-     
+
      complex(kind=wp):: array_q(3)
      integer:: i, j, q    
 
@@ -393,10 +416,13 @@ contains
      ! variances must be computed first since they use old average
      call update_var(av % displacements_var,  system % displacements, &
           av % displacements_tot, real(av % nav1, wp) )
+     call update_av( av % displacements_tot, system % displacements,  real(av % nav1, wp))
      
      !call update_var(av % energy_pot_var,  system % energy_pot, &
      !     av % energy_pot, real(av % nav1, wp) )
 
+     !call update_var(av % energy_kin_var,  system % energy_kin, &
+     !     av % energy_kin, real(av % nav1, wp) )
      !call update_var(av % energy_kin_var,  system % energy_kin, &
      !     av % energy_kin, real(av % nav1, wp) )
 
@@ -406,7 +432,6 @@ contains
      !av % displacements_tot = av % displacements_tot + system % displacements
      !write(6,*) "here1"
 
-     call update_av( av % displacements_tot, system % displacements,  real(av % nav1, wp))
      !write(6,*) "here2"
      !av % displacements_tot2 = av % displacements_tot2 + system % displacements ** 2
      !call update_av( av % displacements_tot2, system % displacements**2,  real(av % nav1, wp))
@@ -564,7 +589,7 @@ contains
      ! ji: modified to include beta=1/kT factor  AND to compute susceptibility correctly :-)
 
      !write(6,*) "Susceptibility. <P^2> - <P>^2 ", (av % polarization2 - av % polarization ** 2 ) * beta * system % nparticles 
-     write(6,*) "Susceptibility. <P^2> - <P>^2, from variance ", av % polarization_var * beta * system % nparticles !/ real(av % nav1, wp)
+     write(6,*) "Classical susceptibility. <P^2> - <P>^2, from variance ", av % polarization_var * beta * system % nparticles !/ real(av % nav1, wp)
 
      ! write <q_i q_j> and <q_i>
      filename = trim( trim(adjustl(string)) // "_mode_susceptibilities.dat")
