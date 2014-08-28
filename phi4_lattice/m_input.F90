@@ -20,6 +20,9 @@ module m_input
      real(kind=wp):: hist_x_min, hist_x_max
      integer::  hist_x_npoints
      integer:: nslices
+     integer:: n_collective_sweep
+     real(wp):: step2, acc_target2, step_K2
+     integer:: n_adj_step2
   end type t_input
   
 contains
@@ -44,8 +47,9 @@ subroutine read_input(ifile, inp)
   read(ifile,*) inp % av_step1, inp % av_step2, inp % n_magic_step
   read(ifile,*) inp % hist_x_min, inp % hist_x_max, inp % hist_x_npoints
   read(ifile,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K  
+  read(ifile,*) inp % step2, inp % acc_target2, inp % n_adj_step2, inp % step_K2  
   read(ifile,*) inp % temp ! in k_b * T
-  read(ifile,*) inp % nslices ! used for pimc only
+  read(ifile,*) inp % nslices, inp % n_collective_sweep ! used for pimc only
   read(ifile,*) inp % av_dyn
   read(ifile,*) inp % mom4_gamma
   read(ifile,*) inp % mom4_gamma_q, inp % div_qpoints_4_mom
@@ -74,8 +78,9 @@ subroutine read_input(ifile, inp)
   write(6,*) inp % av_step1, inp % av_step2, inp % n_magic_step
   write(6,*) inp % hist_x_min, inp % hist_x_max, inp % hist_x_npoints
   write(6,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K  
+  write(6,*) inp % step2, inp % acc_target2, inp % n_adj_step2, inp % step_K2  
   write(6,*) inp % temp ! in k_b * T
-  write(6,*) inp % nslices ! used for pimc only
+  write(6,*) inp % nslices, inp % n_collective_sweep ! used for pimc only
   write(6,*) inp % av_dyn
   write(6,*) inp % mom4_gamma
   write(6,*) inp % mom4_gamma_q, inp % div_qpoints_4_mom
@@ -85,3 +90,4 @@ subroutine read_input(ifile, inp)
 end subroutine read_input
 
 end module m_input
+

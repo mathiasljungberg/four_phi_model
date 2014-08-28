@@ -12,6 +12,7 @@ module m_mc_parameters
   type mc_output
      integer:: nsweeps
      real(kind=wp):: nmoves, acc, energy, delta_acc
+     real(kind=wp):: acc2, delta_acc2
      real(kind=wp):: energy_pot, energy_kin
 
   end type mc_output
@@ -24,7 +25,7 @@ contains
     type(mc_parameters), intent(inout):: mc_params
     type(t_input), intent(in):: inp
 
-    mc_params % step  = inp % step * sqrt( inp %temp)
+    mc_params % step  = inp % step !* sqrt( inp %temp)
     mc_params % acc_target = inp % acc_target
     mc_params % n_adj_step = inp % n_adj_step
     mc_params % step_K = inp % step_K

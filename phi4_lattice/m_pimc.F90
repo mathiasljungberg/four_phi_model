@@ -124,6 +124,10 @@ contains
     do i=1, ppar % nsweeps
       
       call pimc_simple_sweep(psys, ppar, mc_outp)
+
+      if( mod(mc_outp % nsweeps, ppar % n_collective_sweep ) .eq. 0 ) then
+        call pimc_collective_sweep(psys, ppar, mc_outp)
+      end if
       !call pimc_bead_sweep(psys, ppar, mc_outp)
       !call pimc_magic_step(psys, ppar, mc_outp)
       
@@ -181,54 +185,6 @@ contains
   end subroutine pimc
 
 
-!subroutine one_sweep_general(system, mc_params, mc_outp)
-!  type(system_3d), intent(inout):: system
-!  type(mc_parameters), intent(in):: mc_params
-!  type(mc_output), intent(inout):: mc_outp
-!
-!  if (mc_params % first_comp) then
-!    call one_sweep_first_comp(system, mc_params, mc_outp)
-!  else
-!    call  one_sweep(system, mc_params, mc_outp)
-!  end if
-  !  
-!end subroutine one_sweep_general
-!
-!
-!subroutine one_sweep_first_comp(system, mc_params, mc_outp)
-!  type(system_3d), intent(inout):: system
-!  type(mc_parameters), intent(in):: mc_params
-!  type(mc_output), intent(inout):: mc_outp
-!
-!  real(kind=wp):: delta, de, threshold
-!  logical:: flag
-!
-!  integer:: i,j
-!
-!  ! perform one sweep
-!  !call random_number(delta)
-!  do i=1, system % ndisp, 3
-!
-!    call random_number(delta)
-!    call random_number(threshold)
-!    delta = (2.0_wp * delta -1.0_wp)* mc_params % step
-!    de = system_3d_get_delta_potential_energy(system, i, delta)
-!    
-!    if (exp( -mc_params % beta * de) .gt. threshold) then
-!      system % displacements(i) = system % displacements(i) + delta
-!      mc_outp % acc = mc_outp % acc + 1.0_wp  
-!      mc_outp % delta_acc  = mc_outp % delta_acc + 1.0_wp
-!      mc_outp % energy = mc_outp % energy + de
-!    end if
-!    
-! end do
-!
-!mc_outp % nsweeps = mc_outp % nsweeps + 1 
-!mc_outp % nmoves = mc_outp % nmoves + dfloat(system % ndisp) / 3.0_wp
-!    
-!end subroutine one_sweep_first_comp
-!
-!
 
 subroutine pimc_simple_sweep(psys, ppar, mc_outp)
   type(system_3d), intent(inout):: psys(:)
@@ -364,6 +320,55 @@ subroutine pimc_simple_sweep(psys, ppar, mc_outp)
   
 end subroutine pimc_simple_sweep
 
+! the one below is exactly like a classical move!
+subroutine pimc_collective_sweep(psys, ppar, mc_outp)
+  type(system_3d), intent(inout):: psys(:)
+  type(t_pimc_parameters), intent(in):: ppar
+  type(mc_output), intent(inout):: mc_outp
+
+  real(kind=wp):: delta, de, threshold
+  real(wp):: delta_kin_action, delta_pot_action
+  real(wp):: delta_pot_action_tot
+  integer:: i, j, slice
+
+  
+  ! perform one sweep
+  do i=1, psys(1) % ndisp
+      
+    call random_number(delta)
+    call random_number(threshold)
+    delta = (2.0_wp * delta -1.0_wp)* ppar % step2
+
+    delta_pot_action_tot = 0.0d0
+    do slice=1, size(psys)
+      call pimc_get_delta_potential_action(psys, ppar, slice, i, delta, delta_pot_action)
+      delta_pot_action_tot = delta_pot_action_tot + delta_pot_action
+    end do
+
+    delta_kin_action =0.0d0
+
+    if (exp( -(delta_kin_action + delta_pot_action_tot)) .gt. threshold) then
+
+      do j=1, size(psys)
+        psys(j) % displacements(i) = psys(j) % displacements(i) + delta
+      end do
+
+      mc_outp % acc2 = mc_outp % acc2 + 1.0_wp
+      mc_outp % delta_acc2  = mc_outp % delta_acc2 + 1.0_wp
+      mc_outp % energy = mc_outp % energy + (delta_pot_action_tot - delta_kin_action) / ppar % beta
+      
+      !write(6,*) "accepted collective move",  i, mc_outp % acc2, mc_outp % delta_acc2,  (delta_pot_action - delta_kin_action) / ppar % beta 
+
+    end if
+
+  end do
+  
+
+  !mc_outp % nsweeps = mc_outp % nsweeps + 1 
+  mc_outp % nmoves = mc_outp % nmoves + dfloat(psys(1) % ndisp) * size(psys) 
+
+  end subroutine pimc_collective_sweep
+
 !subroutine one_sweep(system, mc_params, mc_outp)
 !  type(system_3d), intent(inout):: system
 !  type(mc_parameters), intent(in):: mc_params
@@ -456,6 +461,8 @@ subroutine pimc_adjust_stepsize(system,  ppar, mc_outp)
   type(mc_output), intent(inout):: mc_outp
 
   real(kind=wp):: delta_acc, step_new
+  real(kind=wp):: delta_acc2, step_new2
+
   
   if( mod(mc_outp % nsweeps, ppar % n_adj_step) .eq. 0 ) then
          
@@ -469,13 +476,36 @@ subroutine pimc_adjust_stepsize(system,  ppar, mc_outp)
      call step_controller(delta_acc, ppar % acc_target, &
           ppar % step , step_new, 0.0_wp, 1.0e10_wp, ppar % step_K)
      
-     !write(50,*) mc_outp % nsweeps, delta_acc, ppar % step , step_new
+     write(50,*) mc_outp % nsweeps, delta_acc, ppar % step , step_new
      
      mc_outp % delta_acc = 0.0_wp
      
      ppar % step = step_new
 
   end if
+
+
+  if( mod(mc_outp % nsweeps, ppar % n_adj_step2) .eq. 0 ) then
+         
+     delta_acc2 =  mc_outp % delta_acc2 * ppar %  n_collective_sweep / (ppar % n_adj_step2 * &
+         system % ndisp)
+
+     if(ppar % first_comp) then
+       delta_acc2 = delta_acc2 * 3.0_wp
+     endif
+     
+     call step_controller(delta_acc2, ppar % acc_target2, &
+          ppar % step2 , step_new2, 0.0_wp, 1.0e10_wp, ppar % step_K2)
+     
+     write(51,*) mc_outp % nsweeps, delta_acc2, ppar % step2 , step_new2
+     
+     mc_outp % delta_acc2 = 0.0_wp
+     
+     ppar % step2 = step_new2
+
+  end if
+
+
 
 
 end subroutine pimc_adjust_stepsize
