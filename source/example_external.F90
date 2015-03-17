@@ -15,7 +15,7 @@ program example_external
   real(wp):: V_self(4)
   real(wp):: V_inter(2) 
   real(wp):: mass
-  real(kind=wp)::  Energy, der
+  real(kind=wp)::  Energy, der(3)
   real(kind=wp), allocatable::  gradient(:)
   real(kind=wp), allocatable::  fc(:,:)
   
@@ -28,7 +28,7 @@ program example_external
   mass = 1.0d0
 
   ! this is the model potenital used in the PRL
-  V_self = (/0.25d0 0.50d0 0.0d0 0.0d0/)  
+  V_self = (/0.25d0, 0.50d0, 0.0d0, 0.0d0/)  
   V_inter = (/1.0d0, 0.50d0/)
 
   ! init the system
