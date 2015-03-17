@@ -852,7 +852,7 @@ contains
                       
 
                       do k2=1,3
-
+  
                          
                          if(i6 .eq. 1) then
                             jj = 3 + 6 * (i4-1)  +k2
