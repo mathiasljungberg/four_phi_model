@@ -57,6 +57,7 @@ module m_averages_new
      type(hist):: hist_T
      !type(hist):: hist_v_gamma1, hist_v_gamma2, hist_v_gamma3
 
+     integer:: order_par_unit
 
   end type averages
 

@@ -425,7 +425,8 @@ subroutine pimc_adjust_stepsize(system,  ppar, mc_outp)
      call step_controller(delta_acc, ppar % acc_target, &
           ppar % step , step_new, 0.0_wp, 1.0e10_wp, ppar % step_K)
      
-     write(50,'(I10,3ES20.10)') mc_outp % nsweeps, delta_acc, ppar % step , step_new
+     write(ppar % step_controler_unit1,'(I10,3ES20.10)') mc_outp % nsweeps, &
+          delta_acc, ppar % step , step_new
      
      mc_outp % delta_acc = 0.0_wp
      
@@ -446,7 +447,8 @@ subroutine pimc_adjust_stepsize(system,  ppar, mc_outp)
      call step_controller(delta_acc2, ppar % acc_target2, &
           ppar % step2 , step_new2, 0.0_wp, 1.0e10_wp, ppar % step_K2)
      
-     write(51,'(I10,3ES20.10)') mc_outp % nsweeps, delta_acc2, ppar % step2 , step_new2
+     write(ppar % step_controler_unit2, '(I10,3ES20.10)') mc_outp % nsweeps, &
+          delta_acc2, ppar % step2 , step_new2
      
      mc_outp % delta_acc2 = 0.0_wp
      

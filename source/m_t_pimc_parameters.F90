@@ -15,12 +15,17 @@ module m_t_pimc_parameters
      integer:: dim
      integer:: nslices
      integer:: n_collective_sweep
+
+     integer:: step_controler_unit1
+     integer:: step_controler_unit2
+
   end type t_pimc_parameters
   
 contains
 
   subroutine pimc_parameters_init(ppar, inp)
     use m_input, only: t_input
+    use m_io, only: get_free_handle
     
     type(t_pimc_parameters), intent(inout):: ppar
     type(t_input), intent(in):: inp
@@ -53,6 +58,12 @@ contains
     
     ppar % basename = inp % basename 
     ppar % n_collective_sweep = inp % n_collective_sweep
+
+    ppar % step_controler_unit1 =  get_free_handle()
+    open(ppar % step_controler_unit1 , file="step_controler1.txt", status="unknown")
+
+    ppar % step_controler_unit2 =  get_free_handle()    
+    open(ppar % step_controler_unit2 , file="step_controler2.txt", status="unknown")
 
   end subroutine pimc_parameters_init
   
