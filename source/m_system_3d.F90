@@ -22,10 +22,13 @@ module m_system_3d
   
 contains
   ! constructor  
-  subroutine system_3d_init(system, supercell)
+  subroutine system_3d_init(system, supercell, mass, V_self, V_inter)
 
     type(system_3d), intent(inout):: system
     integer, intent(in):: supercell(3)
+    real(wp), intent(in):: mass
+    real(wp), intent(in):: V_self(4)
+    real(wp), intent(in):: V_inter(2)
     
     system % supercell = supercell
     system % nparticles = product(supercell)
@@ -39,11 +42,11 @@ contains
     system % displacements = 0.0_wp 
     system % velocities = 0.0_wp 
     system % velocities = 0.0_wp
-    system % masses_p = 0.0_wp
-    system % masses = 0.0_wp
-    system % V_self = 0.0_wp 
-    system % V_inter = 0.0_wp 
-    system % ucell = 0.0_wp 
+    system % masses_p = mass !0.0_wp
+    system % masses = mass !0.0_wp
+    system % V_self = V_self !0.0_wp 
+    system % V_inter = V_inter !0.0_wp 
+    system % ucell = (/2.5_wp, 2.5_wp, 2.5_wp/)
 
     call system_3d_create_lookup_cell(system)
 
@@ -56,26 +59,29 @@ contains
     type(system_3d), intent(inout):: system
     type(t_input), intent(in):: inp
 
-    system % supercell = inp %supercell
-    system % nparticles = product(inp % supercell)
-    system % ndisp = system % nparticles * 3
+    call system_3d_init(system, inp % supercell, &
+         inp % mass, inp % V_self, inp % V_inter)
 
-    allocate(system % displacements(system %ndisp), system % velocities(system %ndisp), &
-         system % accelerations(system %ndisp), &
-         system % masses_p(system % nparticles), &
-         system % masses(system % ndisp) )
+!    system % supercell = inp %supercell
+!    system % nparticles = product(inp % supercell)
+!    system % ndisp = system % nparticles * 3
 
-    system % displacements = 0.0_wp 
-    system % velocities = 0.0_wp 
-    system % velocities = 0.0_wp
+!    allocate(system % displacements(system %ndisp), system % velocities(system %ndisp), &
+!         system % accelerations(system %ndisp), &
+!         system % masses_p(system % nparticles), &
+!         system % masses(system % ndisp) )
+
+!    system % displacements = 0.0_wp 
+!    system % velocities = 0.0_wp 
+!    system % velocities = 0.0_wp
     
-    system % masses_p = inp % mass
-    system % masses = inp % mass
-    system % V_self = inp % V_self
-    system % V_inter = inp % V_inter
-    system % ucell = (/2.5_wp, 2.5_wp, 2.5_wp/)
-
-    call system_3d_create_lookup_cell(system)
+!    system % masses_p = inp % mass
+!    system % masses = inp % mass
+!    system % V_self = inp % V_self
+!    system % V_inter = inp % V_inter
+!    system % ucell = (/2.5_wp, 2.5_wp, 2.5_wp/)
+!
+!    call system_3d_create_lookup_cell(system)
 
     write(6,*) "ndisp", system % ndisp
     

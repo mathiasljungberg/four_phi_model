@@ -72,7 +72,7 @@ SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/m_FFT.o" "/Users/ma
 #SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/libfortran-utilities.a")
 #EXTERNAL_LIBRARY_ADD("/Users/mathias/work/fortran-utilities_build/libfortran-utitlities.a")
 
-SET(EXECUTABLES phi4_lattice bandstructure)
+SET(EXECUTABLES phi4_lattice bandstructure example_external)
 
 FOREACH(EXEC ${EXECUTABLES})
   ADD_EXECUTABLE(${EXEC} ${EXEC}.F90 ${EXT_OBJECTS} ${ALL_MODULES})
