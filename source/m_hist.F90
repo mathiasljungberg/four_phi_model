@@ -71,18 +71,22 @@ contains
   
   ! write histogram to file
   subroutine hist_write(a, outfile)
+    use m_io, only: get_free_handle
+
     !passed variables
     type (hist),intent(inout):: a
     character(LEN=*):: outfile
     
     !local variables
-    integer:: i
+    integer:: i, ifile
     
-    open(10,file=outfile,status='unknown')
+    ifile = get_free_handle()
+    open(ifile, file=outfile,status='unknown')
+    
     do i=1,a%nbins
-       write(10,'((ES16.6E3) (ES16.6E3))') a%x(i), a%y(i)
+       write(ifile,'((ES16.6E3) (ES16.6E3))') a%x(i), a%y(i)
     end do
-    close(10)
+    close(ifile)
 
   end subroutine hist_write
 
