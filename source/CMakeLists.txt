@@ -82,6 +82,8 @@ m_pimc_energies.F90
 m_test.F90
 m_averages_new.F90
 m_averages_func_new.F90
+m_io.F90
+m_define_macro.F90
 )
 
 SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/m_FFT.o" "/Users/mathias/work/fortran-utilities_build/sffteu.o")
@@ -89,7 +91,7 @@ SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/m_FFT.o" "/Users/ma
 #SET(EXT_OBJECTS "/Users/mathias/work/fortran-utilities_build/libfortran-utilities.a")
 #EXTERNAL_LIBRARY_ADD("/Users/mathias/work/fortran-utilities_build/libfortran-utitlities.a")
 
-SET(EXECUTABLES phi4_lattice bandstructure)
+SET(EXECUTABLES phi4_lattice bandstructure example_external)
 
 FOREACH(EXEC ${EXECUTABLES})
   ADD_EXECUTABLE(${EXEC} ${EXEC}.F90 ${EXT_OBJECTS} ${ALL_MODULES})

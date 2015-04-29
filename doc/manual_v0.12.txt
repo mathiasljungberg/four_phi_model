@@ -1,0 +1,179 @@
+manual v 0.12, 2013-10-16
+
+Compilation:
+******************
+
+Edit the Makefile (only blas, lapack is required) type
+
+make all
+
+
+Execution:
+******************
+
+if your input file is called input, just type
+
+four_phi_model_3d < input > out
+
+
+Input file:
+******************
+
+The input file s read as:
+
+read(5,*) runmode  
+read(5,*) thermostat, thermostat_nsteps, thermostat_rate	
+read(5,*) restart, restart_file
+read(5,*) restartmode
+read(5,*) basename 
+read(5,*) supercell
+read(5,*) V_self
+read(5,*) V_inter
+read(5,*) mass
+read(5,*) nsteps 
+read(5,*) n_dump, n_dump_traj
+read(5,*) av_step1, av_step2, n_magic_step
+read(5,*) step, acc_target, n_adj_step, step_K  
+read(5,*) temp ! in k_b * T
+read(5,*) av_dyn
+read(5,*) mom4_gamma
+read(5,*) mom4_gamma_q, div_qpoints_4_mom
+read(5,*) first_comp
+read(5,*) nqpoints_qav
+
+do q=1,  nqpoints_qav
+   read(5,*) qpoints_qav(:,q)
+end do
+
+
+
+where: 
+
+runmode: [character(80)] "mc", "md", or "test"
+thermostat: [character(80)] "velocity_scaling", or "None". Only for md-runs
+thermostat_nsteps: [integer] how often the velocity scaling is done
+thermostat_rate: [real(8)] rate of thermostat
+restart: [logical] if .true. the restart file will be read, if .false. not
+restart_file: [character(80)] full name of restart file
+restart_mode: [character(80)] if "set_random_velocities" the velocities will be reinitialized, else nothing
+basename:  [character(80)] the base name of the project
+supercell: [integer, dim(3)] the supercell
+V_self: [real(8), dim(4)] the four parameters for the self part of the potential energ
+V_inter: [real(8), dim(2)] the two parameters for the nearest neighbor interaction part of the potential energy
+mass: [real(8)] the mass of the atoms
+nsteps: [integer] the number of sweeps or md_steps to be taken
+n_dump: [integer] how often the averages will be dumped in an md-run
+n_dump_traj: [integer] how often the trajectories will be dumped in an md-run
+av_step1: [integer] how often to do the averages (for the not so time-consuming things) 
+av_step2: [integer] how often to do the averages (for the more time-consuming things) 
+n_magic_step: [integer] how often to do the magic mc-move a la Jenssen
+step: [real(8)] the mc or md_step. the mc-step will be scaled with the temperature
+acc_target: [real(8)] the acceptence ratio target (the step will be scaled to meet this)
+n_adj_step: [integer] how often to do the ste scaling
+step_K: [real(8)] the scaling constant in the step scaling process (low value, slow scaling) 
+temp: [real(8)] temperature in k_b * T
+av_dyn: [logical] if .true. the average dynamical matrix will be computed and printed (mc)
+mom4_gamma: [logical] if .true. the fourth moments for gamma will be computed in real space
+mom4_gamma_q: [logical] if .true. the fourth moments for gamma will be computed in q-space (slow!)
+first_comp: [logical] if .true. a "1d"- system is calcualted by only considering the first (i.e. x) component of each atom 
+nqpoints_qav: [integer] the number of q-points for averaging of real space mode susceptitibilities (<x_qa * x_-qb >^2 - <x_qa> * <x_-qb > )
+qpoints_qav: [real, dim(3, nqpoints_av)] the q-points  for averaging of real space mode susceptitibilities
+
+an example input file can be seen below
+
+mc                              ! runmode
+None 0 1.0                              ! thermostat, thermostat_nsteps, thermostat_rate
+.false. mc_eq_1.0.restart       ! restart, restart_file
+None                            ! restartmode
+mc_1.0                          ! basename for files
+4 4 4                           ! supercell dimensions
+1.0d0 1.0d0 1.0d0 1.0d0         ! V_self (c1,c2,c3,c_harm)
+1.0d0 1.0d0                     ! V_inter (c4,c5)
+1.0d0                           ! mass
+10000                           ! nsteps
+100 100                         ! n_dump, n_dump_traj (md: how often use info)
+100 100 100000                  ! av_step1, av_step2
+9.0d-1 0.5 10 0.1               ! step (MC: controls amplitude of trial move)
+2.0                             ! temp in kB units
+.true.                          ! av_dyn !compute average dyn mat?
+.true.                          ! mom4_gamma
+.false. 1                       ! mom4_gamma_q, div_qpoints_4_mom
+.false.                         ! first_comp
+2                               ! nqpoints_qav
+0.0 0.0 0.0
+0.5 0.5 0.5
+
+
+Output files
+**************
+
+histogram_x1.dat:  histograms of the displacements in the three coordinates, x1,x2,x3
+mc_1.0.restart: restart file
+fort.8: first column: mc sweep, second to fourth columns: the instantaneous order parameter
+#fort.40: the whole force constant matrix -to be used by the bandstructure code
+mode_susceptibilities.dat: the averages <x_i x_j > for the qpoints qpoints_qav
+average_dVdx_dVdx.dat: average \beta <f_i f_j>
+average_dyn_mat.dat: average second derivatives
+
+
+Bandstructure Code
+*******************
+
+excecution:
+
+bandstructure < bandstructure.inp > bandstructure.out
+
+The input is read as follows:
+
+! read input
+read(5,*) dyn_mat_flag, infile   ! dyn mat
+read(5,*) mom4_flag, infile_mom4
+read(5,*) mom4_approx
+read(5,*) basename
+read(5,*) first_comp_flag
+read(5,*) sym_flag, symmetry, sym_axis
+read(5,*) nqpoints_inp, nqpoints2 
+
+do i=1,nqpoints_inp
+   read(5,*) qpoints_inp(i,:)
+end do
+
+where:
+
+dyn_mat_flag: [logical] if .true. the infile is read (average_dVdx_dVdx.dat or average_dyn_mat.dat)
+infile: [character(80)], the input force constant matrix (average_dVdx_dVdx.dat or average_dyn_mat.dat)
+mom4_flag: [logical] if .true. the infile_mom4 with 4:th moments is read (mom_4.dat)
+infile_mom4: [character(80)], file with 4:th (6:th) moments (mom_4.dat)
+basename: [character(80)], basename for output files
+first_comp_flag: [logical], it .true. only first component is considered (for one degree of freedom per site) 
+sym_flag: [logical], if .true. the froce constant matrces will be symmetrized
+symmetry: [character(80)], "cubic" or "tetragonal" available
+sym_axis: [integer], axis for the tetragonal case
+nqpoints_inp: [integer], the number of q-points to be read in input
+nqpoints2: [integer], the number of q-points in the path between two read q-points 
+qpoints_inp(i,:): [real(8), dim(3)]: the q-points to be read
+
+sample input file:
+
+true. average_dyn_mat.dat !average_dVdx_dVdx.dat
+.true. mom_4.dat
+0
+bands_dyn_mat.dat
+.false.
+.false. cubic 1
+5 5
+0.0 0.0 0.0
+0.0 0.0 0.5
+0.0 0.5 0.5
+0.5 0.5 0.5
+0.0 0.0 0.0
+
+Output (most important files):
+
+frequencies_mode_susc.dat: file with frequecies from <x_i x_j>, only in the q-points mode_susceptibilities.dat was created with!
+bands_dyn_mat.dat (or whatever basename is): file with band structure from infile, in the q-points given in the input file
+
+
+
+
+

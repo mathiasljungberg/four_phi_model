@@ -1,0 +1,52 @@
+Notes on PIMC 2015-03-12
+
+Many changes were made to the code, mainly in August 2014 when there was some spare time.
+PIMC was implemented in the code. Now the input looks like this
+
+*********************************
+  read(ifile,*) inp % runmode  ! "test" or "mc" or "md"                                                                                                                                                             
+  read(ifile,*) inp % thermostat, inp % thermostat_nsteps, inp % thermostat_rate
+  read(ifile,*) inp % restart, inp % restart_file
+  read(ifile,*) inp % restartmode
+  read(ifile,*) inp % basename ! for files                                                                                                                                                                          
+  read(ifile,*) inp % supercell
+  read(ifile,*) inp % V_self
+  read(ifile,*) inp % V_inter
+  read(ifile,*) inp % mass
+  read(ifile,*) inp % nsteps
+  read(ifile,*) inp % n_dump, inp % n_dump_traj
+  read(ifile,*) inp % av_step1, inp % av_step2, inp % n_magic_step
+  read(ifile,*) inp % hist_x_min, inp % hist_x_max, inp % hist_x_npoints
+  read(ifile,*) inp % step, inp % acc_target, inp % n_adj_step, inp % step_K
+  read(ifile,*) inp % step2, inp % acc_target2, inp % n_adj_step2, inp % step_K2
+  read(ifile,*) inp % temp ! in k_b * T                                                                                                                                                                             
+  read(ifile,*) inp % nslices, inp % n_collective_sweep ! used for pimc only                                                                                                                                        
+  read(ifile,*) inp % av_dyn
+  read(ifile,*) inp % mom4_gamma
+  read(ifile,*) inp % mom4_gamma_q, inp % div_qpoints_4_mom
+  read(ifile,*) inp % first_comp
+  read(ifile,*) inp % nqpoints_qav
+
+  allocate(inp % qpoints_qav(3, inp % nqpoints_qav))
+  do q=1,  inp % nqpoints_qav
+     read(ifile,*) inp % qpoints_qav(:,q)
+  end do
+
+*********************************
+
+
+Output files:
+****************
+
+histogram_x1.dat:  histograms of the displacements in the three coordinates, x1,x2,x3
+mc_1.0.restart: restart file
+fort.8: first column: mc sweep, second to fourth columns: the instantaneous order parameter
+#fort.40: the whole force constant matrix -to be used by the bandstructure code
+mode_susceptibilities.dat: the averages <x_i x_j > for the qpoints qpoints_qav
+average_dVdx_dVdx.dat: average \beta <f_i f_j>
+average_dyn_mat.dat: average second derivatives
+
+fort.50: information about step size and acceptence ratio for bead move:  mc_outp % nsweeps, delta_acc, ppar % step , step_new
+fort.51: information about step size and acceptence ratio for collective move: mc_outp % nsweeps, delta_acc2, ppar % step2 , step_new2 
+
+

@@ -6,6 +6,7 @@ program bandstructure
   use m_moment_fitting
   use m_symmetry
   use m_strings
+  use m_io, only: get_free_handle
   implicit none
 
   character(80):: infile, basename, infile_mom4, infile_mom4_2
@@ -38,6 +39,7 @@ program bandstructure
 
   complex(kind=wp):: eigvec_complex(3,3)
   integer:: mom4_approx
+  integer:: ifile
 
   ! read input
   read(5,*) dyn_mat_flag, infile   ! dyn mat
@@ -54,27 +56,28 @@ program bandstructure
   end do
   
   ! read mode suseptibilities 
-  open(unit=10, file="mode_susceptibilities.dat", status='old')
+  ifile = get_free_handle()
+  open(unit=ifile, file="mode_susceptibilities.dat", status='old')
 
-  read(10,*) nqpoints_mode_susc
+  read(ifile,*) nqpoints_mode_susc
   !write(6,*) nqpoints_mode_susc
   allocate(mode_susc(3,3,nqpoints_mode_susc), qpoints_mode_susc(nqpoints_mode_susc,3))
   allocate(q_average(3,nqpoints_mode_susc), q2_average(3,3,nqpoints_mode_susc))
-  read(10,*) beta, nparticles
+  read(ifile,*) beta, nparticles
   prefactor = beta * nparticles
-  read(10,*)
+  read(ifile,*)
 
   do q=1, nqpoints_mode_susc
-     read(10,*) qpoints_mode_susc(q,:)
+     read(ifile,*) qpoints_mode_susc(q,:)
      !write(6,*) qpoints_mode_susc(q,:)
-     read(10,'(6ES18.10)') q_average(:,q)
+     read(ifile,'(6ES18.10)') q_average(:,q)
      !write(6,*) q_average(:,q)
      do j=1,3
-       read(10,'(6ES18.10)') q2_average(:,j,q)
+       read(ifile,'(6ES18.10)') q2_average(:,j,q)
      end do
-     read(10,*) 
+     read(ifile,*) 
   end do
-  close(10)
+  close(ifile)
 
   ! symmetrize the mode susceptibilities to cubic or tetragonal symmetry
   if(sym_flag) then
@@ -118,15 +121,16 @@ program bandstructure
   ! read dynamical matrix
   if(dyn_mat_flag) then
 
-    open(unit=10, file=infile, status='old')
+    ifile = get_free_handle()
+    open(unit=ifile, file=infile, status='old')
     
-    read(10,*) supercell
+    read(ifile,*) supercell
     ndisp =3*product(supercell)
     allocate( fc(ndisp, 21))
     
-    read(10,*) fc
+    read(ifile,*) fc
     
-    close(10)
+    close(ifile)
 
   end if !if(dyn_mat_flag) then
 
@@ -156,20 +160,21 @@ program bandstructure
   allocate(mom4_inp(3,3,nqpoints_mode_susc))
   
   if(mom4_flag) then
-    open(unit=10, file=infile_mom4, status='old')
+    ifile = get_free_handle()
+    open(unit=ifile, file=infile_mom4, status='old')
     
-    read(10,*) nqpoints_tmp
+    read(ifile,*) nqpoints_tmp
     ! assrert that this is = nqpoints_mode_susc
     
-    read(10,*)
+    read(ifile,*)
     
     do q=1, nqpoints_mode_susc
       do j=1,3
-        read(10,'(6ES18.10)') mom4_inp(:,j,q)
+        read(ifile,'(6ES18.10)') mom4_inp(:,j,q)
       end do
-      read(10,*) 
+      read(ifile,*) 
     end do
-    close(10)  
+    close(ifile)  
 
   end if ! if(mom4_flag) then
 
@@ -212,9 +217,15 @@ program bandstructure
 contains
 
   subroutine compute_band_structure
+    !use m_io, only: get_free_handle
+ 
+    integer:: ifile1, ifile2
 
-    open(12, file=basename, status='unknown')  
-    open(13, file="eigenvectors.dat", status='unknown')
+    ifile1 = get_free_handle()
+    open(ifile1, file=basename, status='unknown')  
+
+    ifile2 = get_free_handle()
+    open(ifile2, file="eigenvectors.dat", status='unknown')
     
     do q=1, nqpoints
       qp = qpoints(q,:)
@@ -234,9 +245,9 @@ contains
       
       call diagonalize_hermitian(fc_q, eig, eigvec_complex)
       
-      write(13,*)  qp
-      write(13,'(2ES18.10)')  eigvec_complex
-      write(13,*)
+      write(ifile2,*)  qp
+      write(ifile2,'(2ES18.10)')  eigvec_complex
+      write(ifile2,*)
       
       do i=1,3
         if (abs(eig(i)) .ge. 0) then
@@ -246,12 +257,12 @@ contains
         end if
       end do !i
       
-      write(12,'(6ES18.10)') qp, band(q,:)
+      write(ifile1,'(6ES18.10)') qp, band(q,:)
 
     end do !q
     
-    close(12)
-    close(13)
+    close(ifile1)
+    close(ifile2)
     
   end subroutine compute_band_structure
 
@@ -272,10 +283,17 @@ contains
   end subroutine compute_mom4_approx1
 
   subroutine compute_freq_mode_susc
+    !use m_io, only: get_free_handle
+
+    integer:: ifile1, ifile2
+
     !real(kind=wp):: mode_susc_n(3)
 
-    open(12, file="frequencies_mode_susc.dat", status='unknown')  
-    open(13, file="eigenvectors_mode_susc.dat", status='unknown')
+    ifile1 = get_free_handle()
+    open(ifile1, file="frequencies_mode_susc.dat", status='unknown')  
+
+    ifile2 = get_free_handle()
+    open(ifile2, file="eigenvectors_mode_susc.dat", status='unknown')
 
     do q=1, nqpoints_mode_susc
       qp = qpoints_mode_susc(q,:)
@@ -286,9 +304,9 @@ contains
       !  mode_susc_n(i) = dot_product(eigvec(:,i), matmul(mode_susc_q, eigvec(:,i) ) ) 
       !end do
 
-      write(13,*)  qp
-      write(13,'(2ES18.10)')  eigvec_complex
-      write(13,*)
+      write(ifile2,*)  qp
+      write(ifile2,'(2ES18.10)')  eigvec_complex
+      write(ifile2,*)
       
       do i=1,3
         if (real(eig(i)) .ge. 0) then
@@ -298,9 +316,12 @@ contains
         end if
       end do !i
       
-      write(12,'(6ES18.10)') qp, band(q,:)
+      write(ifile1,'(6ES18.10)') qp, band(q,:)
 
     end do ! q
+
+    close(ifile1)
+    close(ifile2)
 
 end subroutine compute_freq_mode_susc
   

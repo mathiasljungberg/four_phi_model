@@ -22,7 +22,8 @@ contains
   
   subroutine averages_init_from_inp(av, inp)
     use m_input, only: t_input
-    
+    use m_io, only: get_free_handle
+
     type(averages), intent(inout):: av
     type(t_input), intent(in):: inp
     
@@ -52,6 +53,9 @@ contains
     call hist_init(av % hist_P1, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
     call hist_init(av % hist_P2, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
     call hist_init(av % hist_P3, inp % hist_x_npoints, inp % hist_x_min, inp % hist_x_max)
+
+    av % order_par_unit = get_free_handle()    
+    open(av % order_par_unit , file="order_parameter.txt", status="unknown")
 
   end subroutine averages_init_from_inp
 
@@ -328,7 +332,7 @@ contains
      write(6,*) "Number of accepted moves", mc_outp % acc, "in per cent", (100.0_wp * mc_outp % acc) / mc_outp % nmoves, "%"
      write(6,*) "Average potential energy", av % energy_tot
 
-     call print_averages_common(system, av, mc_params % beta, "" )
+     call print_averages_common(system, av, mc_params % beta, "tot" )
 
    end subroutine print_averages_mc
   
@@ -483,7 +487,8 @@ contains
      av % nav2 = av % nav2 + 1.0_wp        
      
      call get_q_space(system % supercell, system % displacements, array_q, (/0.0_wp ,0.0_wp ,0.0_wp/) )
-     write(8,*) step, dreal(array_q)
+     
+     write(av % order_par_unit,*) step, dreal(array_q)
      
      if(av % flag_av_dyn) then
 
@@ -562,6 +567,8 @@ contains
 
 
    subroutine print_averages_common(system, av, beta, string)
+     use m_io, only: get_free_handle
+
      type(system_3d), intent(in)::system
      type(averages), intent(inout)::av
      real(kind=wp), intent(in):: beta
@@ -575,8 +582,6 @@ contains
      real(kind=wp), allocatable:: eig(:), freq(:), eigvec(:,:)
      character(80):: filename 
      integer:: ifile
-
-     ifile = 41
 
      write(6,*) "****************************"
      write(6,*) "Averages for: ", string
@@ -593,7 +598,9 @@ contains
 
      ! write <q_i q_j> and <q_i>
      filename = trim( trim(adjustl(string)) // "_mode_susceptibilities.dat")
+     ifile = get_free_handle()
      open(ifile, file=filename, status="unknown") 
+
      write(ifile,*) av % nqpoints_qav
      write(ifile,*) beta,  system % nparticles
      write(ifile,*)
@@ -630,7 +637,9 @@ contains
 
         !write(6,*) "writing dynamical matrix"
         filename = trim( trim(adjustl(string)) // "_average_dyn_mat.dat")
+        ifile = get_free_handle()
         open(ifile, file=filename, status="unknown")
+
         write(ifile,*) system % supercell
         write(ifile,*) av % dyn_mat
         close(ifile)
@@ -639,6 +648,8 @@ contains
 
         !write(6,*) "writing dxdx matrix"
         filename = trim( trim(adjustl(string)) // "_average_dVdx_dVdx.dat")
+        ifile = get_free_handle()
+
         open(ifile, file=filename, status="unknown")
         write(ifile,*) system % supercell
         write(ifile,*) av % dxdx *  beta
@@ -655,11 +666,12 @@ contains
            write(6,*) "diagonalized average dynamical matrix"
            
            filename = trim( trim(adjustl(string)) // "_average_dyn_mat_diag.dat")
+           ifile = get_free_handle()
            open(ifile, file=filename, status="unknown")
            
            freq = sqrt(eig) !* hbar * cm
            do i=1, ndisp
-              write(ifile,*) freq(i)
+             write(ifile,*) freq(i)
            end do
            
            close(ifile)
@@ -679,10 +691,12 @@ contains
            !write(44,*) av % mom4_g
 
           filename = trim( trim(adjustl(string)) // "_mom_4.dat")
-           open(ifile, file=filename, status="unknown") 
-           write(ifile,*) av % nqpoints_qav
-           write(ifile,*)
-           do q=1, av % nqpoints_qav
+          ifile = get_free_handle()
+          open(ifile, file=filename, status="unknown") 
+
+          write(ifile,*) av % nqpoints_qav
+          write(ifile,*)
+          do q=1, av % nqpoints_qav
              do j=1,3
                write(ifile,'(6ES18.10)')  (av % mom4(i,j,q), i=1,3)
              end do
@@ -691,28 +705,29 @@ contains
            close(ifile)    
            
          end if
-
+         
 
         if (av % flag_mom4_gamma_q) then
 
           filename = trim( trim(adjustl(string)) // "_mom_4_gamma_q.dat")
-          
-           open(ifile, file=filename, status="unknown") 
-           write(ifile,*) av % nqpoints_4_mom
-           do i=1, av % nqpoints_4_mom
-              write(ifile,*)  av % qpoints_4_mom(i,:), av % dyn_mat2(i,:,:,:) 
-           end do
-           close(ifile)
+          ifile = get_free_handle() 
 
+          open(ifile, file=filename, status="unknown") 
+          write(ifile,*) av % nqpoints_4_mom
+          do i=1, av % nqpoints_4_mom
+            write(ifile,*)  av % qpoints_4_mom(i,:), av % dyn_mat2(i,:,:,:) 
+          end do
+          close(ifile)
+          
           ! write(43,*) sum(sum(av % dyn_mat2(:,:,:,:),3),1)
 
         end if
 
 
-     end if ! if(av % av_dyn ) then
+      end if ! if(av % av_dyn ) then
 
-
-   end subroutine print_averages_common
+      
+    end subroutine print_averages_common
 
    
    subroutine update_averages_md(system, av)
