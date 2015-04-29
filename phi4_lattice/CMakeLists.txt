@@ -6,12 +6,29 @@ IF(CMAKE_Fortran_COMPILER MATCHES ifort)
 
   MESSAGE(STATUS  "ifort compiler found")
 
-  SET(FLAGS "-O0 -warn all -g -CB")
-  SET(INCDIR "-I/usr/include")
-  SET(OMP_FLAGS "")
-  SET(FFTW_LIB "-L/usr/lib -lfftw3 -lm")
-  SET(MKLPATH "/opt/intelcompiler/mkl/lib/intel64")
-  SET(LAPACK_LIB "-Wl,--start-group ${MKLPATH}/libmkl_intel_lp64.a ${MKLPATH}/libmkl_sequential.a ${MKLPATH}/libmkl_core.a -Wl,--end-group")
+  IF(USER_OS STREQUAL koval-00)
+    
+    MESSAGE(STATUS  "option -DUSER_OS=koval-00, ifort on koval-00")
+    
+    SET(FLAGS "-O0 -warn all -g -CB")
+    SET(INCDIR "-I/usr/include")
+    SET(OMP_FLAGS "")
+    SET(FFTW_LIB "-L/usr/lib -lfftw3 -lm")
+    #SET(MKLPATH "-mkl:sequential")
+    SET(LAPACK_LIB "-mkl:sequential")
+    #SET(LAPACK_LIB "-Wl,--start-group ${MKLPATH}/libmkl_intel_lp64.a ${MKLPATH}/libmkl_sequential.a ${MKLPATH}/libmkl_core.a -Wl,--end-group")
+    
+  ELSE(USER_OS STREQUAL koval-00)
+
+
+    SET(FLAGS "-O0 -warn all -g -CB")
+    SET(INCDIR "-I/usr/include")
+    SET(OMP_FLAGS "")
+    SET(FFTW_LIB "-L/usr/lib -lfftw3 -lm")
+    SET(MKLPATH "/opt/intelcompiler/mkl/lib/intel64")
+    SET(LAPACK_LIB "-Wl,--start-group ${MKLPATH}/libmkl_intel_lp64.a ${MKLPATH}/libmkl_sequential.a ${MKLPATH}/libmkl_core.a -Wl,--end-group")
+
+  ENDIF(USER_OS STREQUAL koval-00)
 
 ELSE(CMAKE_Fortran_COMPILER MATCHES gfortran)
 
